@@ -33,3 +33,13 @@ async def test_maps_unexpected_exception_to_internal_error() -> None:
             raise RuntimeError("boom")
     assert "internal error" in str(excinfo.value).lower()
     assert "MyOp" in str(excinfo.value)
+
+
+async def test_passes_through_existing_mcperror() -> None:
+    from mcp.types import INVALID_PARAMS, ErrorData
+    original = McpError(ErrorData(code=INVALID_PARAMS, message="pre-formatted"))
+    with pytest.raises(McpError) as excinfo:
+        async with wrap_sdk_errors("MyOp", sdk_error_base=Exception):
+            raise original
+    # Same instance survives — not re-wrapped.
+    assert excinfo.value is original

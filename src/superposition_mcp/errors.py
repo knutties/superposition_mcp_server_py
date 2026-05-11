@@ -33,14 +33,14 @@ async def wrap_sdk_errors(
     base: Any = sdk_error_base if sdk_error_base is not None else _default_sdk_error_base()
     try:
         yield
+    except McpError:
+        # Pre-formatted MCP error from auth, helpers, or another wrapped layer — pass through.
+        raise
     except base as exc:
         cls = exc.__class__.__name__
         message = f"{operation} failed ({cls}): {exc}"
         _log.warning("%s", message)
         raise McpError(ErrorData(code=INVALID_REQUEST, message=message)) from exc
-    except McpError:
-        # Already a well-formed MCP error (e.g. our own auth-missing ToolError); pass through.
-        raise
     except Exception as exc:
         _log.exception("%s: unexpected exception", operation)
         raise McpError(
