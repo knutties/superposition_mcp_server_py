@@ -15,6 +15,8 @@ def clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
             monkeypatch.delenv(key, raising=False)
 
 
+# Plain helpers below — import directly, not pytest fixtures. They take args,
+# so they don't fit the fixture pattern.
 def make_stdio_ctx() -> MagicMock:
     """Return a Context-like mock whose request_context.request is None (stdio mode)."""
     ctx = MagicMock()

@@ -1163,7 +1163,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "mcp", specifier = ">=1.12" },
-    { name = "superposition-sdk" },
+    { name = "superposition-sdk", specifier = ">=0.106" },
 ]
 
 [package.metadata.requires-dev]

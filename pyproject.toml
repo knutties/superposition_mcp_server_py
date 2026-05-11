@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 license = {text = "Apache-2.0"}
 dependencies = [
     "mcp>=1.12",
-    "superposition-sdk",
+    "superposition-sdk>=0.106",
 ]
 
 [project.scripts]
