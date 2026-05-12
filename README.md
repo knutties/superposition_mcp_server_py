@@ -36,6 +36,76 @@ SUPERPOSITION_ENDPOINT=https://sp.example.com \
 
 In `http` mode the server **requires** an `Authorization: Bearer <token>` header on every inbound MCP request. Requests without one are rejected before any upstream call is made.
 
+## Connecting an MCP client
+
+The token never reaches the LLM. The MCP **client** holds the credential and attaches it to every outbound MCP request; the LLM only sees tool results, not headers. So "passing the token" really means "configure your client to attach the header." Examples below.
+
+### Claude Code (CLI)
+
+```bash
+# stdio: client spawns the binary as a subprocess, passes upstream config via env.
+claude mcp add superposition-local \
+  -e SUPERPOSITION_ENDPOINT=https://sp.example.com \
+  -e SUPERPOSITION_TOKEN=sp_xxx \
+  -e SUPERPOSITION_ORG_ID=org_abc \
+  -e SUPERPOSITION_WORKSPACE=prod \
+  -- uv run --directory /abs/path/to/this/repo superposition-mcp
+
+# streamable-http: client talks to a deployed instance; bearer is sent per request.
+claude mcp add superposition-prod \
+  --transport http \
+  -H "Authorization: Bearer sp_xxx" \
+  -- https://your-mcp-host.example.com/mcp
+```
+
+`-H` is repeatable; `-e` sets subprocess env (stdio only); `-s local|user|project` selects scope. List with `claude mcp list`, drop with `claude mcp remove <name>`.
+
+### Claude Desktop
+
+Native Desktop only speaks stdio today, so HTTP servers are reached via the [`mcp-remote`](https://github.com/geelen/mcp-remote) bridge:
+
+```json
+{
+  "mcpServers": {
+    "superposition-prod": {
+      "command": "npx",
+      "args": [
+        "-y", "mcp-remote",
+        "https://your-mcp-host.example.com/mcp",
+        "--header", "Authorization: Bearer sp_xxx"
+      ]
+    }
+  }
+}
+```
+
+For stdio, point `command` at `superposition-mcp` (or `docker run …`) and supply `env` directly.
+
+### Programmatic clients (Python / TypeScript)
+
+Pass headers when constructing the MCP client. Python example using the official SDK:
+
+```python
+from mcp import ClientSession
+from mcp.client.streamable_http import streamablehttp_client
+
+async with streamablehttp_client(
+    "https://your-mcp-host.example.com/mcp",
+    headers={"Authorization": f"Bearer {os.environ['SP_TOKEN']}"},
+) as (read, write, _):
+    async with ClientSession(read, write) as session:
+        await session.initialize()
+        ...
+```
+
+A complete working example lives in [`scripts/smoke_http.py`](scripts/smoke_http.py).
+
+### Operational notes
+
+- Keep tokens in a secret manager or env var; the JSON / CLI snippets above all support `${VAR}` interpolation (or leave the config out of git entirely).
+- One HTTP deployment can serve many users — each client supplies its own bearer, and the server forwards it upstream per request. That's the multi-tenant model from the design.
+- An inbound request without a valid `Authorization: Bearer <token>` is rejected by the server before any upstream traffic. Verified in `scripts/smoke_http.py`'s no-auth check.
+
 ## Docker
 
 A multi-arch image (`linux/amd64`, `linux/arm64`) is published to GHCR at [`ghcr.io/knutties/superposition_mcp_server_py`](https://github.com/knutties/superposition_mcp_server_py/pkgs/container/superposition_mcp_server_py) on every push to `main` and on `v*.*.*` tags.
