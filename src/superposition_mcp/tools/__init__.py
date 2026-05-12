@@ -19,5 +19,5 @@ from superposition_mcp.tools import experiment_group  # noqa: F401  # Task 14
 from superposition_mcp.tools import function  # noqa: F401  # Task 15
 from superposition_mcp.tools import type_template  # noqa: F401  # Task 16
 from superposition_mcp.tools import variable  # noqa: F401  # Task 17
-# Task 18: from superposition_mcp.tools import webhook  # noqa: F401
+from superposition_mcp.tools import webhook  # noqa: F401  # Task 18
 # Task 19: from superposition_mcp.tools import audit  # noqa: F401
