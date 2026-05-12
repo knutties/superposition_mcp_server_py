@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 
 import pytest
@@ -63,7 +63,7 @@ class _Outer:
 
 def test_to_dict_handles_dataclass_enum_datetime() -> None:
     obj = _Outer(
-        inner=_Inner(name="x", when=datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)),
+        inner=_Inner(name="x", when=datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)),
         status=_Status.OK,
         tags=["a", "b"],
     )

@@ -41,7 +41,9 @@ async def test_get_config_json(env: None) -> None:
     client = MagicMock()
     client.get_config_json = AsyncMock(return_value=_Cfg(config={"feature.x": True}))
     with patch("superposition_mcp.tools.config.get_client", AsyncMock(return_value=client)):
-        result = await get_config_json(ctx=make_stdio_ctx(), if_modified_since="Mon, 01 Jan 2024 00:00:00 GMT")
+        result = await get_config_json(
+            ctx=make_stdio_ctx(), if_modified_since="Mon, 01 Jan 2024 00:00:00 GMT"
+        )
     assert result == {"config": {"feature.x": True}}
     sent = client.get_config_json.await_args.args[0]
     assert sent.if_modified_since == "Mon, 01 Jan 2024 00:00:00 GMT"

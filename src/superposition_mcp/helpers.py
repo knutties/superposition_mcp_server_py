@@ -39,7 +39,10 @@ def resolve_workspace(explicit: str | None) -> str:
 
 
 def filter_none(d: dict[str, Any]) -> dict[str, Any]:
-    """Drop keys whose value is None. Useful when an SDK input dataclass forbids None for some fields."""
+    """Drop keys whose value is None.
+
+    Useful when an SDK input dataclass forbids None for some fields.
+    """
     return {k: v for k, v in d.items() if v is not None}
 
 

@@ -29,4 +29,5 @@ async def list_organisation(
     """List Superposition organisations (paginated)."""
     async with wrap_sdk_errors("ListOrganisation"):
         client = await get_client(ctx)
-        return to_dict(await client.list_organisation(ListOrganisationInput(count=count, page=page)))
+        inp = ListOrganisationInput(count=count, page=page)
+        return to_dict(await client.list_organisation(inp))
