@@ -46,6 +46,12 @@ def filter_none(d: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in d.items() if v is not None}
 
 
+try:  # smithy is a transitive dep of superposition-sdk; absent in pure unit-test envs.
+    from smithy_core.documents import Document as _SmithyDocument
+except ImportError:  # pragma: no cover
+    _SmithyDocument = None  # type: ignore[assignment,misc]
+
+
 def to_dict(obj: Any) -> Any:
     """Recursively convert SDK output objects to JSON-serializable primitives."""
     if obj is None or isinstance(obj, (bool, int, float, str)):
@@ -54,6 +60,10 @@ def to_dict(obj: Any) -> Any:
         return obj.isoformat()
     if isinstance(obj, Enum):
         return obj.value
+    if _SmithyDocument is not None and isinstance(obj, _SmithyDocument):
+        # Document.as_value() returns the underlying Python value, recursively
+        # unwrapping nested Documents. Pass through to_dict for datetime/etc.
+        return to_dict(obj.as_value())
     if isinstance(obj, dict):
         return {k: to_dict(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple, set, frozenset)):

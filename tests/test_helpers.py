@@ -80,3 +80,23 @@ def test_to_dict_passthrough_for_primitives() -> None:
     assert to_dict([1, 2]) == [1, 2]
     assert to_dict("hi") == "hi"
     assert to_dict(None) is None
+
+
+def test_to_dict_unwraps_smithy_document() -> None:
+    """Regression: smithy Document objects must serialize to their underlying value.
+
+    Smithy stores the payload under a private ``_value`` attribute, so the generic
+    __dict__ fallback would emit ``{}``. We must call ``Document.as_value()`` to
+    surface the real content (including nested Documents).
+    """
+    from smithy_core.documents import Document  # type: ignore[import-untyped]
+
+    # Primitive value
+    assert to_dict(Document(value="abc")) == "abc"
+    assert to_dict(Document(value=42)) == 42
+    # Map with a nested Document — as_value() unwraps nested Documents recursively.
+    assert to_dict(Document(value={"pattern": Document(value=".*")})) == {"pattern": ".*"}
+    # Dict containing a Document field (typical SDK response shape).
+    assert to_dict({"schema": Document(value={"type": "string"})}) == {
+        "schema": {"type": "string"}
+    }
