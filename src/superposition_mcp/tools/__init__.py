@@ -8,7 +8,7 @@ Uncomment a line as each resource is implemented in Tasks 7–19.
 """
 from __future__ import annotations
 
-# Task 7:  from superposition_mcp.tools import organisation  # noqa: F401
+from superposition_mcp.tools import organisation  # noqa: F401  # Task 7
 # Task 8:  from superposition_mcp.tools import workspace  # noqa: F401
 # Task 9:  from superposition_mcp.tools import default_config  # noqa: F401
 # Task 10: from superposition_mcp.tools import context  # noqa: F401
