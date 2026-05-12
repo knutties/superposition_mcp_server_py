@@ -16,12 +16,12 @@ WORKDIR /app
 # Install dependencies first (cached layer) — only pyproject + lockfile, no source.
 COPY pyproject.toml uv.lock README.md ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-install-project --no-dev
+    uv sync --frozen --no-install-project --no-dev --no-editable
 
-# Now install the project itself.
+# Now install the project itself (non-editable so the venv is self-contained).
 COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
+    uv sync --frozen --no-dev --no-editable
 
 # --- Runtime stage: copy the prebuilt venv onto a slim base ---
 FROM python:3.12-slim AS runtime
