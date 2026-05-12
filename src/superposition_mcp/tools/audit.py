@@ -30,12 +30,24 @@ async def list_audit_logs(
 ) -> dict[str, Any]:
     """List audit log entries (paginated, with optional filters).
 
-    Additional SDK-exposed filters:
-    - all: return every entry without pagination
-    - from_date: filter entries on or after this datetime
+    IMPORTANT: the upstream Superposition API applies a narrow recent default
+    window (often returning 0 entries) when neither ``from_date`` nor
+    ``to_date`` is supplied. To search historical activity, ALWAYS pass an
+    explicit ``from_date`` covering the period you care about — e.g.
+    ``from_date="2020-01-01T00:00:00Z"`` to retrieve everything.
+
+    Each entry can be large (full SQL plus original/new row JSON), so prefer
+    a small ``count`` (e.g. 10–25) and narrow with ``tables`` / ``action`` /
+    ``username`` when possible. Avoid ``all=True`` unless you know the
+    workspace has few entries; large workspaces can exceed MCP client
+    response budgets and get truncated.
+
+    Filters:
+    - all: return every entry without pagination (avoid for active workspaces)
+    - from_date: filter entries on or after this datetime (pass this to see history)
     - to_date: filter entries on or before this datetime
-    - tables: filter by table names (e.g. ["experiments", "config"])
-    - action: filter by action types (e.g. ["UPDATE", "CREATE"])
+    - tables: filter by table names (e.g. ["experiments", "default_configs"])
+    - action: filter by action types (e.g. ["UPDATE", "INSERT", "DELETE"])
     - username: filter by username
     - sort_by: field to sort results by
     """
