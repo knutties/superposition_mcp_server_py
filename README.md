@@ -36,6 +36,39 @@ SUPERPOSITION_ENDPOINT=https://sp.example.com \
 
 In `http` mode the server **requires** an `Authorization: Bearer <token>` header on every inbound MCP request. Requests without one are rejected before any upstream call is made.
 
+## Docker
+
+A multi-arch image is published to GHCR on every push to `main` and on `v*.*.*` tags. Pull and run:
+
+```bash
+# stdio (typical for local MCP clients)
+docker run --rm -i \
+  -e SUPERPOSITION_ENDPOINT=https://sp.example.com \
+  -e SUPERPOSITION_TOKEN=sp_xxx \
+  -e SUPERPOSITION_ORG_ID=org_abc \
+  -e SUPERPOSITION_WORKSPACE=prod \
+  ghcr.io/<owner>/<repo>:latest
+
+# streamable-http
+docker run --rm -p 8000:8000 \
+  -e SUPERPOSITION_ENDPOINT=https://sp.example.com \
+  ghcr.io/<owner>/<repo>:latest \
+  --transport http --host 0.0.0.0 --port 8000
+```
+
+Build locally:
+
+```bash
+docker build -t superposition-mcp:dev .
+docker run --rm superposition-mcp:dev --help
+```
+
+## CI
+
+`.github/workflows/ci.yml` runs `ruff` and `pytest` on every push and PR, plus a no-push Docker build to validate the `Dockerfile` and run `--help` inside the image.
+
+`.github/workflows/docker-publish.yml` builds multi-arch (`linux/amd64`, `linux/arm64`) images and pushes them to GHCR, tagged by branch, commit SHA, semver tag, and `latest` (on `main`).
+
 ## Tools exposed
 
 All [`@readonly`](https://smithy.io/2.0/spec/behavior-traits.html#readonly-trait) operations from Superposition's smithy models, plus the three POST-but-semantically-query ops (`get_context_from_condition`, `list_experiment`, `applicable_variants`). The `GetSecret` / `ListSecrets` ops are deliberately **excluded** — secret values must not flow through an LLM tool surface.
