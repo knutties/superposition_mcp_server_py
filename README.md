@@ -46,9 +46,9 @@ Available tags:
 |---|---|
 | `latest` | most recent push to `main` |
 | `main` | same as `latest`, but kept as a branch tag |
+| `yyyymmddHHMM` (e.g., `202605121042`) | immutable calver tag, UTC, one per workflow run on `main` |
 | `<MAJOR>.<MINOR>.<PATCH>` (e.g., `0.1.0`) | published from `v*.*.*` git tags |
 | `<MAJOR>.<MINOR>` (e.g., `0.1`) | rolling minor pointer |
-| `sha-<short>` (e.g., `sha-b4f1d5c`) | immutable per-commit |
 
 Pull and run:
 
