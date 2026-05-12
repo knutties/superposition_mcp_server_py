@@ -13,7 +13,7 @@ from superposition_mcp.tools import workspace  # noqa: F401  # Task 8
 from superposition_mcp.tools import default_config  # noqa: F401  # Task 9
 from superposition_mcp.tools import context  # noqa: F401  # Task 10
 from superposition_mcp.tools import experiment  # noqa: F401  # Task 11
-# Task 12: from superposition_mcp.tools import dimension  # noqa: F401
+from superposition_mcp.tools import dimension  # noqa: F401  # Task 12
 # Task 13: from superposition_mcp.tools import config as config_tools  # noqa: F401
 # Task 14: from superposition_mcp.tools import experiment_group  # noqa: F401
 # Task 15: from superposition_mcp.tools import function  # noqa: F401
