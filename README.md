@@ -36,6 +36,22 @@ SUPERPOSITION_ENDPOINT=https://sp.example.com \
 
 In `http` mode the server **requires** an `Authorization: Bearer <token>` header on every inbound MCP request. Requests without one are rejected before any upstream call is made.
 
+### Deploying behind a domain
+
+The streamable-HTTP transport in the MCP Python SDK ships with DNS-rebinding protection: by default it only accepts `Host` headers matching `127.0.0.1`, `localhost`, or `[::1]`. Serving the MCP under a public domain without configuring this yields `421 Invalid Host header`. Two options:
+
+- **Allow your domain explicitly** (recommended — keeps the check on):
+
+  ```bash
+  superposition-mcp --transport http --host 0.0.0.0 \
+    --allowed-host mcp.example.com \
+    --allowed-origin https://mcp.example.com
+  ```
+
+  Both flags are repeatable. Wildcard port via `host:*`. Env equivalents: `MCP_ALLOWED_HOSTS` and `MCP_ALLOWED_ORIGINS` (comma-separated; CLI flags take precedence when both are set).
+
+- **Rely on your reverse proxy / ingress** to validate the Host header. If you bind to a non-loopback host and pass no `--allowed-host` (and no env value), the server logs a warning and disables the built-in check, trusting the edge layer.
+
 ## Connecting an MCP client
 
 The token never reaches the LLM. The MCP **client** holds the credential and attaches it to every outbound MCP request; the LLM only sees tool results, not headers. So "passing the token" really means "configure your client to attach the header." Examples below.
