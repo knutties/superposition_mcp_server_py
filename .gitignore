@@ -9,3 +9,4 @@ build/
 .coverage
 *.swp
 .DS_Store
+.python-version
