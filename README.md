@@ -48,7 +48,7 @@ The streamable-HTTP transport in the MCP Python SDK ships with DNS-rebinding pro
     --allowed-origin https://mcp.example.com
   ```
 
-  Both flags are repeatable. Wildcard port via `host:*`. Env equivalents: `MCP_ALLOWED_HOSTS` and `MCP_ALLOWED_ORIGINS` (comma-separated; CLI flags take precedence when both are set).
+  Both flags are repeatable. Wildcard port via `host:*`. Env equivalents: `MCP_ALLOWED_HOSTS` and `MCP_ALLOWED_ORIGINS` (comma-separated; CLI flags take precedence when both are set). When any origin is configured the server also enables CORS for browser-based MCP clients: it answers `OPTIONS` preflight on `/mcp` with the listed origins, the streamable-HTTP headers (`Authorization`, `Content-Type`, `Accept`, `Mcp-Session-Id`, `Mcp-Protocol-Version`, `Last-Event-Id`), and `Access-Control-Allow-Credentials: true`. Server-to-server clients ignore CORS; configuring origins is only required for browsers.
 
 - **Rely on your reverse proxy / ingress** to validate the Host header. If you bind to a non-loopback host and pass no `--allowed-host` (and no env value), the server logs a warning and disables the built-in check, trusting the edge layer.
 
