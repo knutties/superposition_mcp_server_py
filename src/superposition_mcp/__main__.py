@@ -63,7 +63,7 @@ def _resolve_list(cli_values: list[str] | None, env_name: str) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    server.configure_logging()
+    log_level = server.configure_logging()
     if args.transport == "stdio":
         server.mcp.run(transport="stdio")
         return 0
@@ -93,17 +93,21 @@ def main(argv: list[str] | None = None) -> int:
         )
     # else: loopback bind with no explicit hosts -> keep FastMCP's auto-installed defaults.
 
-    _run_streamable_http(args.host, args.port)
+    _run_streamable_http(args.host, args.port, log_level)
     return 0
 
 
-def _run_streamable_http(host: str, port: int) -> None:
+def _run_streamable_http(host: str, port: int, log_level: str) -> None:
     """Replicates FastMCP.run_streamable_http_async with an extra ASGI middleware.
 
     FastMCP doesn't expose a hook to inject middleware into the streamable-HTTP
     Starlette app, so we build the app via the public ``streamable_http_app()``
     method, wrap it with our header-logging middleware, and run uvicorn directly.
     Mirrors mcp.server.fastmcp.server.FastMCP.run_streamable_http_async.
+
+    ``log_level`` is the resolved value from LOG_LEVEL (via ``configure_logging``)
+    rather than ``mcp.settings.log_level``, so DEBUG actually reaches uvicorn's
+    own loggers when the user opts in.
     """
     starlette_app = server.mcp.streamable_http_app()
     app = HTTPLogMiddleware(starlette_app)
@@ -111,7 +115,7 @@ def _run_streamable_http(host: str, port: int) -> None:
         app,
         host=host,
         port=port,
-        log_level=server.mcp.settings.log_level.lower(),
+        log_level=log_level.lower(),
     )
     anyio.run(uvicorn.Server(config).serve)
 
