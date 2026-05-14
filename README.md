@@ -52,6 +52,10 @@ The streamable-HTTP transport in the MCP Python SDK ships with DNS-rebinding pro
 
 - **Rely on your reverse proxy / ingress** to validate the Host header. If you bind to a non-loopback host and pass no `--allowed-host` (and no env value), the server logs a warning and disables the built-in check, trusting the edge layer.
 
+### Debugging HTTP requests
+
+Set `LOG_LEVEL=DEBUG` to log every inbound HTTP request and response (method, path, status, and headers) on the `superposition_mcp.http` logger. Useful for diagnosing edge-proxy issues such as `421 Invalid Host header` — the rejected `Host` value appears verbatim. Sensitive headers (`authorization`, `proxy-authorization`, `cookie`, `set-cookie`, `x-api-key`) have their values redacted to `***`; bodies are never logged. The middleware is a no-op above DEBUG, so it is safe to leave installed in production.
+
 ## Connecting an MCP client
 
 The token never reaches the LLM. The MCP **client** holds the credential and attaches it to every outbound MCP request; the LLM only sees tool results, not headers. So "passing the token" really means "configure your client to attach the header." Examples below.
