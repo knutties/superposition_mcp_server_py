@@ -58,18 +58,21 @@ def test_main_invokes_stdio() -> None:
 
 def test_main_invokes_streamable_http_with_settings() -> None:
     from superposition_mcp.__main__ import main
-    with patch("superposition_mcp.server.mcp") as mock_mcp:
+    with patch("superposition_mcp.server.mcp") as mock_mcp, patch(
+        "superposition_mcp.__main__._run_streamable_http"
+    ) as mock_run:
         rc = main(["--transport", "http", "--host", "0.0.0.0", "--port", "9000"])
     assert rc == 0
-    _args, kwargs = mock_mcp.run.call_args
-    assert kwargs["transport"] == "streamable-http"
+    mock_run.assert_called_once_with("0.0.0.0", 9000)
     assert mock_mcp.settings.host == "0.0.0.0"
     assert mock_mcp.settings.port == 9000
 
 
 def test_main_http_allowed_host_flag_enables_protection() -> None:
     from superposition_mcp.__main__ import main
-    with patch("superposition_mcp.server.mcp") as mock_mcp:
+    with patch("superposition_mcp.server.mcp") as mock_mcp, patch(
+        "superposition_mcp.__main__._run_streamable_http"
+    ):
         rc = main(
             [
                 "--transport", "http",
@@ -91,7 +94,9 @@ def test_main_http_env_allowed_hosts(monkeypatch: pytest.MonkeyPatch) -> None:
     from superposition_mcp.__main__ import main
     monkeypatch.setenv("MCP_ALLOWED_HOSTS", "a.example.com, b.example.com:*")
     monkeypatch.setenv("MCP_ALLOWED_ORIGINS", "https://a.example.com")
-    with patch("superposition_mcp.server.mcp") as mock_mcp:
+    with patch("superposition_mcp.server.mcp") as mock_mcp, patch(
+        "superposition_mcp.__main__._run_streamable_http"
+    ):
         rc = main(["--transport", "http", "--host", "0.0.0.0"])
     assert rc == 0
     ts = mock_mcp.settings.transport_security
@@ -104,7 +109,9 @@ def test_main_http_env_allowed_hosts(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_main_http_cli_overrides_env(monkeypatch: pytest.MonkeyPatch) -> None:
     from superposition_mcp.__main__ import main
     monkeypatch.setenv("MCP_ALLOWED_HOSTS", "from-env.example.com")
-    with patch("superposition_mcp.server.mcp") as mock_mcp:
+    with patch("superposition_mcp.server.mcp") as mock_mcp, patch(
+        "superposition_mcp.__main__._run_streamable_http"
+    ):
         rc = main(
             [
                 "--transport", "http",
@@ -119,7 +126,9 @@ def test_main_http_cli_overrides_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_main_http_non_loopback_without_allowlist_disables_protection() -> None:
     from superposition_mcp.__main__ import main
-    with patch("superposition_mcp.server.mcp") as mock_mcp:
+    with patch("superposition_mcp.server.mcp") as mock_mcp, patch(
+        "superposition_mcp.__main__._run_streamable_http"
+    ):
         rc = main(["--transport", "http", "--host", "0.0.0.0"])
     assert rc == 0
     ts = mock_mcp.settings.transport_security
@@ -130,7 +139,9 @@ def test_main_http_non_loopback_without_allowlist_disables_protection() -> None:
 def test_main_http_loopback_keeps_fastmcp_defaults() -> None:
     from superposition_mcp.__main__ import main
     sentinel = object()
-    with patch("superposition_mcp.server.mcp") as mock_mcp:
+    with patch("superposition_mcp.server.mcp") as mock_mcp, patch(
+        "superposition_mcp.__main__._run_streamable_http"
+    ):
         mock_mcp.settings.transport_security = sentinel
         rc = main(["--transport", "http", "--host", "127.0.0.1"])
     assert rc == 0

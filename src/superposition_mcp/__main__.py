@@ -6,9 +6,12 @@ import logging
 import os
 import sys
 
+import anyio
+import uvicorn
 from mcp.server.transport_security import TransportSecuritySettings
 
 from superposition_mcp import server
+from superposition_mcp.http_logging import HTTPLogMiddleware
 
 _log = logging.getLogger(__name__)
 
@@ -90,8 +93,27 @@ def main(argv: list[str] | None = None) -> int:
         )
     # else: loopback bind with no explicit hosts -> keep FastMCP's auto-installed defaults.
 
-    server.mcp.run(transport="streamable-http")
+    _run_streamable_http(args.host, args.port)
     return 0
+
+
+def _run_streamable_http(host: str, port: int) -> None:
+    """Replicates FastMCP.run_streamable_http_async with an extra ASGI middleware.
+
+    FastMCP doesn't expose a hook to inject middleware into the streamable-HTTP
+    Starlette app, so we build the app via the public ``streamable_http_app()``
+    method, wrap it with our header-logging middleware, and run uvicorn directly.
+    Mirrors mcp.server.fastmcp.server.FastMCP.run_streamable_http_async.
+    """
+    starlette_app = server.mcp.streamable_http_app()
+    app = HTTPLogMiddleware(starlette_app)
+    config = uvicorn.Config(
+        app,
+        host=host,
+        port=port,
+        log_level=server.mcp.settings.log_level.lower(),
+    )
+    anyio.run(uvicorn.Server(config).serve)
 
 
 if __name__ == "__main__":
