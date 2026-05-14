@@ -63,7 +63,7 @@ def test_main_invokes_streamable_http_with_settings() -> None:
     ) as mock_run:
         rc = main(["--transport", "http", "--host", "0.0.0.0", "--port", "9000"])
     assert rc == 0
-    mock_run.assert_called_once_with("0.0.0.0", 9000, "INFO")
+    mock_run.assert_called_once_with("0.0.0.0", 9000, "INFO", [])
     assert mock_mcp.settings.host == "0.0.0.0"
     assert mock_mcp.settings.port == 9000
 

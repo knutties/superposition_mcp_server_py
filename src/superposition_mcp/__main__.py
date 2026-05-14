@@ -9,9 +9,23 @@ import sys
 import anyio
 import uvicorn
 from mcp.server.transport_security import TransportSecuritySettings
+from starlette.middleware.cors import CORSMiddleware
+from starlette.types import ASGIApp
 
 from superposition_mcp import server
 from superposition_mcp.http_logging import HTTPLogMiddleware
+
+# Headers a browser-based MCP client may legitimately send/read cross-origin.
+# Includes the streamable-HTTP transport's session/protocol/resume headers.
+_CORS_ALLOW_HEADERS = [
+    "authorization",
+    "content-type",
+    "accept",
+    "last-event-id",
+    "mcp-session-id",
+    "mcp-protocol-version",
+]
+_CORS_EXPOSE_HEADERS = ["mcp-session-id"]
 
 _log = logging.getLogger(__name__)
 
@@ -93,24 +107,47 @@ def main(argv: list[str] | None = None) -> int:
         )
     # else: loopback bind with no explicit hosts -> keep FastMCP's auto-installed defaults.
 
-    _run_streamable_http(args.host, args.port, log_level)
+    _run_streamable_http(args.host, args.port, log_level, allowed_origins)
     return 0
 
 
-def _run_streamable_http(host: str, port: int, log_level: str) -> None:
-    """Replicates FastMCP.run_streamable_http_async with an extra ASGI middleware.
+def _build_http_app(allowed_origins: list[str]) -> ASGIApp:
+    """Build the streamable-HTTP ASGI chain: HTTPLogMiddleware → [CORS] → Starlette app.
+
+    ``CORSMiddleware`` is only installed when ``allowed_origins`` is non-empty —
+    browser MCP clients need it for preflight; server-side clients never send
+    OPTIONS so installing it would be dead weight. Origins are passed through
+    verbatim, so they should match what browsers will send (no ``host:*`` port
+    wildcards — those are only meaningful for the SDK's Origin allow-list).
+    """
+    inner: ASGIApp = server.mcp.streamable_http_app()
+    if allowed_origins:
+        inner = CORSMiddleware(
+            inner,
+            allow_origins=allowed_origins,
+            allow_methods=["GET", "POST", "OPTIONS"],
+            allow_headers=_CORS_ALLOW_HEADERS,
+            allow_credentials=True,
+            expose_headers=_CORS_EXPOSE_HEADERS,
+        )
+    return HTTPLogMiddleware(inner)
+
+
+def _run_streamable_http(
+    host: str, port: int, log_level: str, allowed_origins: list[str]
+) -> None:
+    """Replicates FastMCP.run_streamable_http_async with extra ASGI middleware.
 
     FastMCP doesn't expose a hook to inject middleware into the streamable-HTTP
     Starlette app, so we build the app via the public ``streamable_http_app()``
-    method, wrap it with our header-logging middleware, and run uvicorn directly.
+    method, wrap it (CORS + header logging), and run uvicorn directly.
     Mirrors mcp.server.fastmcp.server.FastMCP.run_streamable_http_async.
 
     ``log_level`` is the resolved value from LOG_LEVEL (via ``configure_logging``)
     rather than ``mcp.settings.log_level``, so DEBUG actually reaches uvicorn's
     own loggers when the user opts in.
     """
-    starlette_app = server.mcp.streamable_http_app()
-    app = HTTPLogMiddleware(starlette_app)
+    app = _build_http_app(allowed_origins)
     config = uvicorn.Config(
         app,
         host=host,
