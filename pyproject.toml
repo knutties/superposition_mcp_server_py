@@ -1,13 +1,13 @@
 [project]
 name = "superposition-mcp"
-version = "0.1.0"
-description = "Read-only MCP server for Juspay Superposition."
+version = "0.2.0"
+description = "MCP server for Juspay Superposition."
 readme = "README.md"
 requires-python = ">=3.12"
 license = {text = "Apache-2.0"}
 dependencies = [
     "mcp>=1.12",
-    "superposition-sdk>=0.106",
+    "superposition-sdk>=0.116",
 ]
 
 [project.scripts]

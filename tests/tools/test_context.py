@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from smithy_core.documents import Document
 
 from superposition_mcp.tools.context import (
     get_context,
@@ -53,7 +54,11 @@ async def test_get_context_from_condition(env: None) -> None:
         result = await get_context_from_condition(context=cond, ctx=make_stdio_ctx())
     assert result["id"] == "c2"
     sent = client.get_context_from_condition.await_args.args[0]
-    assert sent.context == cond
+    # This input takes a single Document payload, not a map of Documents. Passing
+    # the bare dict through fails at encode time with
+    # "'dict' object has no attribute 'serialize'".
+    assert isinstance(sent.context, Document)
+    assert sent.context.as_value() == cond
 
 
 async def test_list_contexts(env: None) -> None:

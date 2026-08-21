@@ -7,14 +7,35 @@ Importing this module registers all tool decorators as a side effect (via the
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 from mcp.server.fastmcp import FastMCP
 
-from superposition_mcp.config import load_config
+from superposition_mcp.config import load_config, writes_enabled
 
 _log = logging.getLogger(__name__)
 
 mcp = FastMCP("superposition")
+
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+def write_tool() -> Callable[[F], F]:
+    """Register a mutating tool, unless the process is pinned read-only.
+
+    Behaves exactly like ``@mcp.tool()`` when writes are enabled. When
+    ``SUPERPOSITION_READONLY`` is set the function is returned unregistered, so
+    the mutating tool never appears in ``tools/list`` and cannot be invoked at
+    all — a client cannot reach a tool the server never advertised.
+    """
+
+    def decorator(fn: F) -> F:
+        if not writes_enabled():
+            return fn
+        return mcp.tool()(fn)  # type: ignore[return-value]
+
+    return decorator
 
 
 def configure_logging() -> str:

@@ -181,3 +181,200 @@ Managed via `uv` (`pyproject.toml` + `uv.lock`).
 - **Schema completeness** — FastMCP generates each tool's input schema from the Python type hints on the wrapper. The wrapper signature must cover every field the LLM needs; auditing that against each smithy operation is part of implementation, not design.
 - **Response shape** — the SDK returns dataclass-like objects. v1 converts them to plain dicts via the SDK's serialization helper (whatever it exposes) or a small `_to_dict` shim. The exact shim is an implementation detail.
 - **Basic auth fallback** — if real users need it, it's a small extension to `_resolve_token` and `get_client`. Not in v1.
+
+---
+
+## Amendment — 2026-08-19: write tools, resolution tools, contract refresh
+
+Status: implemented (v0.2.0). Supersedes the "Out of scope" list above where they conflict.
+
+### What changed and why
+
+The original scope rule was "every `@readonly` smithy operation, plus three named POST-but-query ops". That rule had a hole: Superposition's config **resolution** family is `POST` and is not marked `@readonly`, so it fell outside the rule and was never exposed — even though it answers the questions an agent is most often asked ("what config does this user get?", "why is this key set to that?"). Those are now in.
+
+Writes were also brought in scope, at the user's direction.
+
+### Scope changes
+
+**Added (read):** `get_config`, `get_resolved_config`, `get_detailed_resolved_config`, `get_resolved_config_explanation`, `get_resolved_config_with_identifier`, `get_experiment_config`, `get_webhook_by_event`, `validate_context`.
+
+**Added (write):** creates/updates for context, default config, dimension, experiment, experiment group, function, type template, variable, webhook, workspace, organisation; the experiment lifecycle (ramp / pause / resume / conclude / discard); `weight_recompute`; `publish_function`; `test_function`.
+
+**Still out of scope:** every `Delete*`, `BulkOperation` (its payload can contain deletes), `RotateMasterEncryptionKey`, `RotateWorkspaceEncryptionKey`, `MigrateWorkspaceSchema`, and all `Secret` operations.
+
+Totals: 37 read + 33 write = 70 tools.
+
+### New design elements
+
+- **`write_tool()`** (`server.py`) registers a mutating tool only when writes are enabled. `SUPERPOSITION_READONLY=1` makes it a no-op, so the tool is never advertised in `tools/list` and cannot be invoked. This is a blast-radius control, not an access-control boundary — the upstream token still governs what is actually permitted.
+- **`to_document` / `to_document_map`** (`helpers.py`) wrap values for SDK fields typed `Document` and `dict[str, Document]` respectively. See the bug note below.
+- **`run_write`** (`errors.py`) converts `WebhookFailed` (HTTP 512) into a successful result carrying a warning. 512 means the mutation *was applied* and only the webhook notification failed; raising it would tell the model the write failed and invite a duplicate retry.
+
+### Bug found while doing this
+
+`context` arguments were being passed to the SDK as bare `dict`s. SDK fields typed `Document` are encoded via `ShapeSerializer.write_document`, which calls `.serialize_contents()` on its argument — a plain `dict` has none, so every affected call failed at request-encode time with `'dict' object has no attribute 'serialize'`.
+
+This affected `get_context_from_condition`, `applicable_variants`, `list_experiment` and `list_experiment_groups`. Unit tests never caught it because they assert against a mocked client, which never serializes; the smoke scripts never caught it because none of them passed a `context`. Fixed via the `to_document*` helpers, and `tests/test_documents.py` plus a live-serialization check now cover it.
+
+Note the two shapes differ and are easy to confuse: `GetContextFromConditionInput.context` is a **single** `Document` payload, while every other `context` input is a `dict[str, Document]` where the *values* are wrapped.
+
+### Contract refresh (superposition-sdk 0.106.2 → 0.116.0)
+
+Corrected on existing tools:
+
+| Tool(s) | Was | Now |
+|---|---|---|
+| `list_contexts`, `list_experiment`, `applicable_variants` | `prefix: str` | `prefix: list[str]` |
+| `list_contexts` | `created_by: str`, `last_modified_by: str` | `list[str]` |
+| `list_contexts` | `plaintext: bool` | `plaintext: str` |
+| `list_experiment` | `created_by: str` | `list[str]` |
+| `list_experiment_groups` | `group_type: str` | `list[str]` |
+| `list_function` | `function_type: str` | `list[str]` |
+| `get_config_json`, `get_config_toml`, `list_experiment`, `list_experiment_groups` | `if_modified_since: str` | `datetime` |
+| `list_experiment` | `from_date: str`, `to_date: str` | `datetime` |
+
+Added to existing tools: `exclude_prefix` (`list_contexts`, `list_experiment`, `applicable_variants`), `dimension_params` (`list_audit_logs`, `list_contexts`, `list_experiment`, `list_experiment_groups`), `all` (`list_workspace`, `list_organisation`), `name` (`list_default_configs`). `dimension_match_strategy` gained a `non_conflicting` value. `get_workspace` output now carries `workspace_lock`.
+
+---
+
+## Amendment — 2026-08-21: live integration results and the compatibility shim
+
+Status: implemented. All 37 read tools were exercised against a live deployment
+(org-scoped service token) over the real MCP stdio
+protocol. Five failed for reasons that were **not** in this server's code, and
+are now worked around in `compat.py`.
+
+### Upstream spec/implementation mismatches found
+
+The smithy model and the actix handlers disagree. Every generated SDK (Python,
+Go, Java, JS, Haskell) will hit these, so they are worth reporting upstream:
+
+1. **`GetVersion` is unreachable.** The model declares
+   `@http(method: "GET", uri: "/version/{id}")`, but the handler is
+   `#[get("/version/{version}")]` (`context_aware_config/src/api/config/handlers.rs:877`)
+   mounted under `scope("/config")` (`superposition/src/main.rs:409`) — so the
+   live route is `/config/version/{id}`. The spec path 404s; the scoped path
+   returns 200.
+2. **`ValidateContext` uses the wrong method.** The model declares `PUT
+   /context/validate`; the handler is `#[post("/validate")]`
+   (`context/handlers.rs:1275`). PUT 404s, POST works.
+3. **Required response fields the server does not send.**
+   `ListExperiment`, `ListExperimentGroups` and `GetExperimentConfig` mark
+   `last_modified` (`@httpHeader("last-modified")`) `@required`, but the
+   deployment omits the header. `ListVersions` marks `config` `@required` on
+   each item and omits it. In both cases the SDK raises
+   `TypeError: <Output>.__init__() missing 1 required keyword-only argument`
+   while decoding an otherwise-successful HTTP 200.
+
+Note these fields were `@required` at v0.106.2 as well — verified by decoding
+that wheel — so the SDK bump in the previous amendment did not introduce them.
+
+Also worth noting: `last_modified` is modelled as `DateTime`
+(`@timestampFormat("date-time")`), not `HttpDate`, even though it rides on a
+header. A live server sends `2026-08-19T10:04:08.020449+00:00`, so the
+substituted sentinel must be ISO-8601 — an HTTP-date sentinel decodes as
+`Invalid isoformat string`.
+
+### The shim
+
+`compat.CompatHTTPClient` wraps the SDK's transport (`HTTPClient` is a
+single-method protocol) and is installed in `auth.get_client`. It repairs
+requests before sending and responses before decoding, filling in only absent
+values. `SUPERPOSITION_STRICT_RESPONSES=1` disables it entirely.
+
+Response bodies arrive from aiohttp as an **async generator of chunks**, not a
+reader — the body-rewrite path has to handle both, and the rewritten response is
+rebuilt with `bytes` since the original stream is consumed by reading it.
+
+### Results
+
+28 of 31 executed tool calls succeeded. The remaining three are the server
+responding correctly, confirmed by direct `curl`:
+
+- `list_organisation` / `get_organisation` — `/superposition/organisations`
+  returns **403** to the org-scoped service token; that path is platform-admin
+  scope. Not a client bug.
+- `get_webhook_by_event` — **404 "No records found"**, because the workspace has
+  zero webhooks.
+
+Six further tools were skipped because the target workspace has no rows to
+address (`get_experiment`, `get_experiment_group`, `get_variable`,
+`get_webhook`, `get_context`, `get_context_from_condition`).
+
+The 33 write tools were **not** exercised: they would create real config in a
+live workspace, and since no delete tools are exposed the harness cannot clean
+up after itself.
+
+---
+
+## Amendment - 2026-08-21b: write tools verified against a live deployment
+
+All 33 write tools were exercised against a live deployment, in a scratch
+workspace, over the real MCP stdio protocol, in dependency order: create ->
+read-back -> update -> lifecycle. **47 of 49 write-path calls succeed.** The two
+that do not are `create_organisation` / `update_organisation`, which return 403
+because `/superposition/organisations` is a platform-admin path - the same
+reason the org read tools 403.
+
+Re-running the read suite against the now-populated workspace lifts it to 34/36,
+with only those same two org tools failing.
+
+### Further upstream defects found (and worked around)
+
+4. **The SDK serializer does not escape control characters.** `smithy-json`
+   writes string values verbatim, so a value containing a newline produces a body
+   that is not valid JSON - `json.loads` rejects the SDK's own output. The server
+   answers `Json deserialize error: control character (\u0000-\u001F) found while parsing a string`. Since function source always contains
+   newlines, this makes `create_function` / `update_function` impossible without
+   repair. `_escape_json_control_chars` walks the body and escapes control bytes
+   that occur *inside* string literals (those outside are legal whitespace).
+
+   Note the follow-on trap: escaping lengthens the body, so `content-length` must
+   be rewritten too, or the server reads a truncated payload and fails with
+   `EOF while parsing a string`.
+
+5. **Error detail is discarded.** Validation failures come back as HTTP 400 with
+   a `text/plain` body. The generated SDK only decodes modelled JSON errors, so
+   the caller saw `UnknownApiError: Unknown` - actionable by nobody, and
+   impossible for a model to self-correct from. Plain-text error bodies are now
+   re-wrapped as `{"message": ...}`. This single change turned every opaque
+   failure in the write run into a specific, fixable message.
+
+6. **Webhook version field is renamed.** The server sends `payload_version`; the
+   model requires `version`. Affects create/update/get/list.
+
+### A defect in this server, now fixed
+
+Nine `create_*` tools declared server-required fields as optional. The smithy
+models mark `description` `@required` (and `enabled` / `method` on
+`CreateWebhook`), but smithy-python generates every Input dataclass field as
+`X | None = None`, so the SDK signature gives no hint - the requirement is only
+visible in the model. Those parameters are now required in the tool signatures,
+which is also what stops a model from emitting a call that cannot succeed.
+
+**Lesson for future tool work here: derive required-ness from
+`smithy/models/*.smithy`, never from the generated dataclass.**
+
+### Test-data constraints worth knowing
+
+Not bugs, but they cost a round each and are now captured in docstrings:
+
+- Variable names must match `^[A-Z][A-Z0-9_]{0,49}$`.
+- `test_function`'s `stage` is lowercase (`draft` / `published`).
+- `test_function`'s `type` is an enum (`ConfigKey` / `Dimension`), and
+  `environment` must be `{"context": {...}, "overrides": {...}}` - `{}` is rejected.
+- An experiment's CONTROL variant must mirror the value its context currently
+  resolves to, not the workspace default. Mutating the context override or the
+  default config mid-flight invalidates it and `ramp_experiment` then fails with
+  "Outdated control variant overrides".
+- `update_overrides_experiment` and `conclude_experiment` need the
+  **server-assigned** variant ids (`<experiment_id>-control`), not the ids
+  submitted at creation. Re-read with `get_experiment` first.
+- Webhooks are unique per event; a second webhook on the same event is rejected.
+
+### Cleanup note
+
+The run leaves permanent objects in the target workspace (dimensions, default configs,
+type templates, variables, a webhook, contexts, functions, a concluded
+experiment, and a `mcpws*` workspace), all named `mcp*` with a timestamp suffix.
+No delete tools are exposed, so removing them requires the API or UI directly.

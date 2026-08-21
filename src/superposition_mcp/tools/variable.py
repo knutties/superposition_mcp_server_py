@@ -1,15 +1,20 @@
-"""MCP tools for the Variable resource (read-only)."""
+"""MCP tools for the Variable resource."""
 from __future__ import annotations
 
 from typing import Any
 
 from mcp.server.fastmcp import Context
-from superposition_sdk.models import GetVariableInput, ListVariablesInput
+from superposition_sdk.models import (
+    CreateVariableInput,
+    GetVariableInput,
+    ListVariablesInput,
+    UpdateVariableInput,
+)
 
 from superposition_mcp.auth import get_client
-from superposition_mcp.errors import wrap_sdk_errors
+from superposition_mcp.errors import run_write, wrap_sdk_errors
 from superposition_mcp.helpers import filter_none, resolve_org, resolve_workspace, to_dict
-from superposition_mcp.server import mcp
+from superposition_mcp.server import mcp, write_tool
 
 
 @mcp.tool()
@@ -49,13 +54,9 @@ async def list_variables(
 ) -> dict[str, Any]:
     """List variables in a workspace (paginated).
 
-    Additional SDK-exposed filters:
     - all: return every variable without pagination
-    - name: filter by variable name(s)
-    - created_by: filter by creator(s)
-    - last_modified_by: filter by last modifier(s)
-    - sort_on: field to sort by
-    - sort_by: sort direction (asc/desc)
+    - name / created_by / last_modified_by: filter by one or more values
+    - sort_on: field to sort by; sort_by: direction (asc/desc)
     """
     async with wrap_sdk_errors("ListVariables"):
         client = await get_client(ctx)
@@ -72,3 +73,69 @@ async def list_variables(
             sort_by=sort_by,
         )
         return to_dict(await client.list_variables(ListVariablesInput(**filter_none(kwargs))))
+
+
+@write_tool()
+async def create_variable(
+    name: str,
+    value: str,
+    change_reason: str,
+    description: str,
+    ctx: Context,
+    org_id: str | None = None,
+    workspace_id: str | None = None,
+) -> dict[str, Any]:
+    """Create a workspace variable. MUTATES CONFIG.
+
+    Variables hold reusable string values referenced from config and functions.
+    For encrypted values use Superposition's secrets API directly — secrets are
+    deliberately not exposed through this MCP server.
+    """
+    async with wrap_sdk_errors("CreateVariable"):
+        client = await get_client(ctx)
+        kwargs: dict[str, Any] = dict(
+            name=name,
+            value=value,
+            change_reason=change_reason,
+            org_id=resolve_org(org_id),
+            workspace_id=resolve_workspace(workspace_id),
+            description=description,
+        )
+        return to_dict(
+            await run_write(
+                "CreateVariable",
+                client.create_variable(CreateVariableInput(**filter_none(kwargs))),
+            )
+        )
+
+
+@write_tool()
+async def update_variable(
+    name: str,
+    change_reason: str,
+    ctx: Context,
+    org_id: str | None = None,
+    workspace_id: str | None = None,
+    value: str | None = None,
+    description: str | None = None,
+) -> dict[str, Any]:
+    """Update a workspace variable. MUTATES CONFIG.
+
+    Only the fields you pass are changed.
+    """
+    async with wrap_sdk_errors("UpdateVariable"):
+        client = await get_client(ctx)
+        kwargs: dict[str, Any] = dict(
+            name=name,
+            change_reason=change_reason,
+            org_id=resolve_org(org_id),
+            workspace_id=resolve_workspace(workspace_id),
+            value=value,
+            description=description,
+        )
+        return to_dict(
+            await run_write(
+                "UpdateVariable",
+                client.update_variable(UpdateVariableInput(**filter_none(kwargs))),
+            )
+        )

@@ -19,7 +19,6 @@ import sys
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-
 REQUIRED_ENV = ("SUPERPOSITION_ENDPOINT", "SUPERPOSITION_TOKEN")
 
 
@@ -95,6 +94,24 @@ async def main() -> int:
                 session,
                 "list_contexts",
                 {"org_id": org_id, "workspace_id": workspace_id, "count": 3},
+            )
+
+            # Tools that send a `context` map exercise the Document-wrapping path.
+            # Nothing above does, which is why a serialization bug there once went
+            # unnoticed by both the unit tests (mocked client) and this script.
+            ws = {"org_id": org_id, "workspace_id": workspace_id}
+            await _call(session, "get_resolved_config", {**ws, "context": {}})
+            await _call(
+                session,
+                "get_resolved_config",
+                {**ws, "context": {}, "show_reasoning": True},
+            )
+            await _call(session, "get_config", {**ws, "context": {}})
+            await _call(session, "get_experiment_config", {**ws, "context": {}})
+            await _call(
+                session,
+                "list_experiment",
+                {**ws, "count": 3, "context": {}},
             )
 
     print("\nsmoke test complete")

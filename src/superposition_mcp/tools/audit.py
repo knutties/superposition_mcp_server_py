@@ -26,6 +26,7 @@ async def list_audit_logs(
     tables: list[str] | None = None,
     action: list[str] | None = None,
     username: str | None = None,
+    dimension_params: dict[str, str] | None = None,
     sort_by: str | None = None,
 ) -> dict[str, Any]:
     """List audit log entries (paginated, with optional filters).
@@ -49,6 +50,8 @@ async def list_audit_logs(
     - tables: filter by table names (e.g. ["experiments", "default_configs"])
     - action: filter by action types (e.g. ["UPDATE", "INSERT", "DELETE"])
     - username: filter by username
+    - dimension_params: extra dimension filters keyed by full query-param name,
+      e.g. ``{"dimension[country]": "IN"}``
     - sort_by: field to sort results by
     """
     async with wrap_sdk_errors("ListAuditLogs"):
@@ -64,6 +67,7 @@ async def list_audit_logs(
             tables=tables,
             action=action,
             username=username,
+            dimension_params=dimension_params,
             sort_by=sort_by,
         )
         return to_dict(await client.list_audit_logs(ListAuditLogsInput(**filter_none(kwargs))))

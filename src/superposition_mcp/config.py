@@ -9,6 +9,16 @@ class MissingEndpointError(RuntimeError):
     """SUPERPOSITION_ENDPOINT was not set."""
 
 
+_TRUTHY = frozenset({"1", "true", "yes", "on"})
+
+
+def _env_flag(name: str, *, default: bool = False) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in _TRUTHY
+
+
 @dataclass(frozen=True)
 class Config:
     endpoint: str
@@ -16,6 +26,7 @@ class Config:
     default_org_id: str | None
     default_workspace: str | None
     log_level: str
+    readonly: bool
 
 
 def load_config() -> Config:
@@ -30,4 +41,16 @@ def load_config() -> Config:
         default_org_id=os.environ.get("SUPERPOSITION_ORG_ID"),
         default_workspace=os.environ.get("SUPERPOSITION_WORKSPACE"),
         log_level=os.environ.get("LOG_LEVEL", "INFO"),
+        readonly=_env_flag("SUPERPOSITION_READONLY"),
     )
+
+
+def writes_enabled() -> bool:
+    """True unless the operator pinned this process to the read-only tool surface.
+
+    Read directly from the environment (not via :func:`load_config`) because tool
+    registration happens at import time, before ``SUPERPOSITION_ENDPOINT`` is
+    necessarily validated. Set ``SUPERPOSITION_READONLY=1`` to restore the
+    pre-0.2.0 posture where no mutating tool is exposed at all.
+    """
+    return not _env_flag("SUPERPOSITION_READONLY")

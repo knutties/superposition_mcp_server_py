@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from smithy_core.documents import Document
 
 from superposition_mcp.tools.experiment import (
     applicable_variants,
@@ -60,5 +61,6 @@ async def test_applicable_variants(env: None) -> None:
             ctx=make_stdio_ctx(),
         )
     sent = client.applicable_variants.await_args.args[0]
-    assert sent.context == {"country": "IN"}
+    # dict[str, Document]: the map values are wrapped, the map itself is not.
+    assert sent.context == {"country": Document("IN")}
     assert sent.identifier == "user-42"

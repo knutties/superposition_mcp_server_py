@@ -35,7 +35,10 @@ _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="superposition-mcp",
-        description="Read-only MCP server for Juspay Superposition.",
+        description=(
+            "MCP server for Juspay Superposition. Read tools are always exposed; "
+            "write tools are exposed unless SUPERPOSITION_READONLY is set."
+        ),
     )
     parser.add_argument(
         "--transport",

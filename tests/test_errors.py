@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import pytest
 from mcp.shared.exceptions import McpError
+from smithy_core.documents import Document
 
-from superposition_mcp.errors import wrap_sdk_errors
+from superposition_mcp.errors import run_write, wrap_sdk_errors
 
 
 class _FakeSdkError(Exception):
@@ -43,3 +44,39 @@ async def test_passes_through_existing_mcperror() -> None:
             raise original
     # Same instance survives — not re-wrapped.
     assert excinfo.value is original
+
+
+# --- run_write / WebhookFailed --------------------------------------------
+
+
+async def test_run_write_returns_result_on_success() -> None:
+    async def ok() -> str:
+        return "done"
+
+    assert await run_write("CreateThing", ok()) == "done"
+
+
+async def test_run_write_converts_webhook_failed_into_a_result() -> None:
+    """HTTP 512 means the write WAS applied; raising would invite a duplicate retry."""
+    from superposition_sdk.models import WebhookFailed
+
+    payload = Document({"id": "ctx-1"})
+
+    async def boom() -> None:
+        raise WebhookFailed(message="hook down", data=payload)
+
+    out = await run_write("CreateContext", boom())
+    assert out["webhook_delivery_failed"] is True
+    assert out["result"] is payload
+    assert "APPLIED" in out["warning"]
+    assert "Do not retry" in out["warning"]
+
+
+async def test_run_write_lets_other_errors_propagate() -> None:
+    from superposition_sdk.models import ResourceNotFound
+
+    async def boom() -> None:
+        raise ResourceNotFound(message="nope")
+
+    with pytest.raises(ResourceNotFound):
+        await run_write("GetThing", boom())

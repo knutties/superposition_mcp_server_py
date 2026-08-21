@@ -1146,7 +1146,7 @@ wheels = [
 
 [[package]]
 name = "superposition-mcp"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "mcp" },
@@ -1163,7 +1163,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "mcp", specifier = ">=1.12" },
-    { name = "superposition-sdk", specifier = ">=0.106" },
+    { name = "superposition-sdk", specifier = ">=0.116" },
 ]
 
 [package.metadata.requires-dev]
@@ -1175,7 +1175,7 @@ dev = [
 
 [[package]]
 name = "superposition-sdk"
-version = "0.106.2"
+version = "0.116.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "smithy-core" },
@@ -1183,7 +1183,7 @@ dependencies = [
     { name = "smithy-json" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ff/95/c67417ef3b35efed3adbb9cdc4c7c8583c0460db04f3a2e22b5b495d2442/superposition_sdk-0.106.2-py3-none-any.whl", hash = "sha256:7fc88d1f70b857c38e029a5b83c5249d92492020fb3a3cea45f7dbf89f8088bc", size = 96543, upload-time = "2026-05-08T11:41:10.922Z" },
+    { url = "https://files.pythonhosted.org/packages/cf/94/61fa4cb8220150c0490d18a43881f7ee5b90a2fc30080b13fc6027ea1211/superposition_sdk-0.116.0-py3-none-any.whl", hash = "sha256:94f702fb3794d1cb9395ca9fbe365178e67b5976950d68b0b676b25f2ab54102", size = 101231, upload-time = "2026-08-03T06:08:50.413Z" },
 ]
 
 [[package]]

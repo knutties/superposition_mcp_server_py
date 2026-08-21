@@ -52,6 +52,52 @@ except ImportError:  # pragma: no cover
     _SmithyDocument = None  # type: ignore[assignment,misc]
 
 
+def _require_document() -> Any:
+    if _SmithyDocument is None:  # pragma: no cover - only in stripped envs
+        raise McpError(
+            ErrorData(
+                code=INVALID_REQUEST,
+                message="smithy_core is not installed; cannot build a Document payload",
+            )
+        )
+    return _SmithyDocument
+
+
+def to_document(value: Any) -> Any:
+    """Wrap a plain JSON-ish value as a single smithy ``Document``.
+
+    Fields typed ``Document`` in the SDK (e.g. ``GetContextFromCondition.context``,
+    ``metrics``, ``value``) are serialized via ``ShapeSerializer.write_document``,
+    which calls ``.serialize_contents()`` on whatever it is handed. A bare ``dict``
+    has no such method, so passing one through raises
+    ``'dict' object has no attribute 'serialize'`` at request-encode time.
+    """
+    if value is None:
+        return None
+    doc = _require_document()
+    return value if isinstance(value, doc) else doc(value)
+
+
+def to_document_map(value: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Wrap each value of a mapping as a ``Document``.
+
+    For fields typed ``dict[str, Document]`` (most ``context`` / ``override`` /
+    ``schema`` inputs), it is the map *values* that must be Documents, not the
+    map itself. Contrast with :func:`to_document`.
+    """
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise McpError(
+            ErrorData(
+                code=INVALID_REQUEST,
+                message=f"expected an object/mapping, got {type(value).__name__}",
+            )
+        )
+    doc = _require_document()
+    return {k: (v if isinstance(v, doc) else doc(v)) for k, v in value.items()}
+
+
 def to_dict(obj: Any) -> Any:
     """Recursively convert SDK output objects to JSON-serializable primitives."""
     if obj is None or isinstance(obj, (bool, int, float, str)):
