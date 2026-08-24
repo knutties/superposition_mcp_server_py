@@ -81,6 +81,21 @@ def test_malformed_header_falls_back_to_env(
     assert _resolve_token(make_http_ctx({"authorization": "Basic abc"})) == "tok_shared"
 
 
+@pytest.mark.parametrize(
+    "header",
+    [
+        "Bearer Bearer tok_http",
+        "bearer bearer tok_http",
+        "Bearer  Bearer  tok_http",
+        "Bearer Bearer Bearer tok_http",
+    ],
+)
+def test_http_collapses_doubled_bearer_scheme(clean_env: None, header: str) -> None:
+    """Test clients that own the "Bearer " prefix double it when handed a full
+    header value; upstream then rejects and answers with an HTML login page."""
+    assert _resolve_token(make_http_ctx({"authorization": header})) == "tok_http"
+
+
 def test_http_wrong_scheme_raises(clean_env: None) -> None:
     ctx = make_http_ctx({"authorization": "Basic abc"})
     with pytest.raises(McpError):

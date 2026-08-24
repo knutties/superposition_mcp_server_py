@@ -34,16 +34,26 @@ def _missing_auth(reason: str) -> McpError:
 
 
 def _strip_bearer(value: str) -> str:
-    """Tolerate a ``Bearer `` prefix on a configured token.
+    """Strip any number of leading ``Bearer `` prefixes from a token.
 
-    ``bearer_auth_config`` adds the scheme itself, so a token stored as
-    "Bearer sp_x" would go upstream as "Bearer Bearer sp_x" and fail as a 401
-    with nothing pointing at the cause. Strip it rather than punish the guess.
+    ``bearer_auth_config`` adds the scheme itself, so a token that already
+    carries one goes upstream as "Bearer Bearer <tok>" and is rejected — and
+    Superposition answers that with an HTML login page, so the real cause is
+    well hidden.
+
+    This happens easily in practice: many MCP test clients render a "Bearer
+    Token" field that adds the prefix for you, so pasting a whole
+    ``Bearer <tok>`` header value produces a doubled scheme. Collapse repeats
+    rather than punish the guess. The loop is bounded so a pathological value
+    cannot spin.
     """
-    scheme, sep, rest = value.strip().partition(" ")
-    if sep and scheme.lower() == "bearer" and rest.strip():
-        return rest.strip()
-    return value.strip()
+    token = value.strip()
+    for _ in range(4):
+        scheme, sep, rest = token.partition(" ")
+        if not (sep and scheme.lower() == "bearer" and rest.strip()):
+            break
+        token = rest.strip()
+    return token
 
 
 def _token_from_header(ctx: Any) -> str | None:
@@ -58,7 +68,8 @@ def _token_from_header(ctx: Any) -> str | None:
     scheme, _, value = header.partition(" ")
     if scheme.lower() != "bearer" or not value.strip():
         return None
-    return value.strip()
+    # Collapse a doubled scheme (see _strip_bearer) before forwarding upstream.
+    return _strip_bearer(value)
 
 
 def _resolve_token(ctx: Any) -> str:
