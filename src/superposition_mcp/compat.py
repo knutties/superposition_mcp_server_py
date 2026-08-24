@@ -308,6 +308,9 @@ class CompatHTTPClient:
         response = await self._inner.send(request, request_config=request_config)
         path = _path_of(request)
 
+        if _is_html(response):
+            return await _surface_html_login_page(path, response)
+
         if response.status >= 400:
             return await _surface_plaintext_error(path, response)
 
@@ -320,6 +323,57 @@ class CompatHTTPClient:
         elif response.status == 200 and path.startswith("/webhook"):
             response = await _rewrite_json_body(path, response, _repair_webhook_body)
         return response
+
+
+_HTML_MARKERS = (b"<!doctype html", b"<html")
+
+
+def _is_html(response: HTTPResponse) -> bool:
+    field = response.fields.get("content-type")
+    values = getattr(field, "values", None) or []
+    return any("html" in v.lower() for v in values)
+
+
+async def _surface_html_login_page(path: str, response: HTTPResponse) -> HTTPResponse:
+    """Turn an HTML login page into a legible auth error.
+
+    When the bearer token is missing, invalid or expired, Superposition answers
+    with a 302 to its OIDC login page. The HTTP client follows the redirect, so
+    the SDK receives an HTML document with status 200 and fails while decoding
+    it::
+
+        lexical error: invalid char in json text.
+            <!DOCTYPE html> <html class="lo
+
+    Nothing in that points at the real cause. The API never legitimately returns
+    HTML, so treat it as the authentication failure it is.
+    """
+    try:
+        raw = await _read_body(response)
+    except Exception:  # pragma: no cover - defensive
+        raw = b""
+    if raw and not any(m in raw[:512].lower() for m in _HTML_MARKERS):
+        # content-type said HTML but the body isn't; leave it alone.
+        return _with_body(response, raw)
+
+    _log.warning(
+        "%s returned an HTML page instead of JSON - treating as an auth failure", path
+    )
+    fields = response.fields
+    fields.set_field(Field(name="content-type", values=["application/json"]))
+    message = (
+        "Superposition returned its HTML login page instead of an API response. "
+        "The bearer token is missing, invalid, or expired - check the "
+        "Authorization header on the MCP request. Tokens copied from a browser "
+        "session cookie expire after 24 hours; use an API token for anything "
+        "long-lived."
+    )
+    return HTTPResponse(
+        body=json.dumps({"message": message}).encode(),
+        status=401,
+        fields=fields,
+        reason="Unauthorized",
+    )
 
 
 def _is_json(response: HTTPResponse) -> bool:

@@ -145,6 +145,7 @@ deployment:
 | `GetVersion` | `GET /version/{id}` | serves `GET /config/version/{id}` — the handler is `#[get("/version/{v}")]` mounted under `scope("/config")` | reroute the request |
 | *(all writes)* | strings JSON-escaped | the SDK's own serializer emits **raw control characters** inside JSON strings, so any value containing a newline is invalid JSON | escape control chars in the outgoing body and fix `content-length` |
 | *(all errors)* | modelled JSON errors | returns validation failures as `text/plain`, which the SDK discards, reporting `UnknownApiError: Unknown` | re-wrap as `{"message": ...}` so the real reason surfaces |
+| *(auth failure)* | a `401` | 302-redirects to an HTML login page, which the SDK reports as `lexical error: invalid char in json text ... <!DOCTYPE html>` | surface a `401` naming an expired/invalid token |
 | `CreateWebhook`, `UpdateWebhook`, `GetWebhook` | `version` | sends `payload_version` | map it onto `version` |
 | `ValidateContext` | `PUT /context/validate` | serves `#[post("/validate")]` | switch the method to POST |
 | `ListExperiment`, `ListExperimentGroups`, `GetExperimentConfig` | `last_modified` `@required` | omits the `last-modified` response header | substitute the Unix epoch |

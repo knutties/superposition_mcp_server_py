@@ -299,3 +299,65 @@ async def test_rewritten_body_updates_content_length() -> None:
     sent = inner.seen
     assert int(sent.fields["content-length"].values[0]) == len(sent.body)
     assert len(sent.body) > len(raw)
+
+
+# --- HTML login page -> legible auth error ---------------------------------
+
+
+async def test_html_login_page_becomes_an_auth_error() -> None:
+    """An expired/invalid token yields a followed 302 to an HTML login page.
+
+    The SDK then fails with 'lexical error: invalid char in json text ...
+    <!DOCTYPE html>', which points at nothing useful.
+    """
+    inner = _Inner(
+        _resp(
+            status=200,
+            body=b'<!DOCTYPE html> <html class="login"><body>Sign in</body></html>',
+            headers=[Field(name="content-type", values=["text/html; charset=utf-8"])],
+        )
+    )
+    resp = await CompatHTTPClient(inner).send(_req("POST", "/config"))
+    assert resp.status == 401
+    msg = json.loads(resp.body)["message"]
+    assert "expired" in msg
+    assert "Authorization" in msg
+
+
+async def test_html_detection_is_case_insensitive() -> None:
+    inner = _Inner(
+        _resp(
+            status=200,
+            body=b"<html><head><title>Login</title></head></html>",
+            headers=[Field(name="content-type", values=["TEXT/HTML"])],
+        )
+    )
+    resp = await CompatHTTPClient(inner).send(_req("POST", "/config/resolve"))
+    assert resp.status == 401
+
+
+async def test_html_content_type_with_non_html_body_is_left_alone() -> None:
+    """Don't rewrite a body that merely claims to be HTML."""
+    inner = _Inner(
+        _resp(
+            status=200,
+            body=b'{"actually":"json"}',
+            headers=[Field(name="content-type", values=["text/html"])],
+        )
+    )
+    resp = await CompatHTTPClient(inner).send(_req("POST", "/config"))
+    assert resp.status == 200
+    assert json.loads(resp.body) == {"actually": "json"}
+
+
+async def test_json_responses_are_unaffected_by_html_check() -> None:
+    inner = _Inner(
+        _resp(
+            status=200,
+            body=b'{"ok":true}',
+            headers=[Field(name="content-type", values=["application/json"])],
+        )
+    )
+    resp = await CompatHTTPClient(inner).send(_req("POST", "/config"))
+    assert resp.status == 200
+    assert json.loads(resp.body) == {"ok": True}
