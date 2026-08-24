@@ -39,7 +39,13 @@ SUPERPOSITION_ENDPOINT=https://sp.example.com \
   uv run superposition-mcp --transport http --host 0.0.0.0 --port 8000
 ```
 
-In `http` mode the server **requires** an `Authorization: Bearer <token>` header on every inbound MCP request. Requests without one are rejected before any upstream call is made.
+In `http` mode the server relays credentials rather than interpreting them: the inbound `Authorization` header is forwarded to Superposition **verbatim, scheme included**. Consequences worth knowing:
+
+- **Any scheme Superposition accepts works.** Bearer tokens, API tokens (`Bearer apikey_…`) and Basic credentials all pass through. For Basic, `X-Grant-Type` is relayed too, so `client_credentials` and `password` grants both work.
+- **A malformed header is relayed as sent, not repaired.** If your client emits `Bearer Bearer <tok>` — common when a UI has a "Bearer Token" field that adds the prefix and you paste a whole header value — Superposition rejects it. Paste the *bare* token into such fields. The server deliberately does not guess at intent; it reports the rejection instead.
+- **Requests with no `Authorization` header** fall back to `SUPERPOSITION_TOKEN` if the deployment sets one, and are otherwise rejected before any upstream call.
+
+`SUPERPOSITION_TOKEN` is the one credential this server constructs a header from, so it takes a **raw token** — a stray `Bearer ` prefix is stripped rather than doubled.
 
 ### Deploying behind a domain
 

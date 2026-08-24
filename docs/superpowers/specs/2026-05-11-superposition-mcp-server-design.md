@@ -378,3 +378,35 @@ The run leaves permanent objects in the target workspace (dimensions, default co
 type templates, variables, a webhook, contexts, functions, a concluded
 experiment, and a `mcpws*` workspace), all named `mcp*` with a timestamp suffix.
 No delete tools are exposed, so removing them requires the API or UI directly.
+
+---
+
+## Amendment - 2026-08-24: relay credentials verbatim
+
+`auth.py` previously parsed the token out of the inbound `Authorization` header
+and had `bearer_auth_config` re-add the scheme. That asymmetry was the source of
+a real bug: a client sending `Bearer Bearer <tok>` had `Bearer <tok>` extracted
+and re-prefixed, so a valid credential was rejected upstream - and the fix
+attempted at first was string surgery to collapse repeated prefixes, i.e.
+guessing what the caller meant.
+
+The server now forwards the inbound `Authorization` header **verbatim**. The SDK
+is configured with no auth scheme (verified: it then sends no `Authorization` of
+its own), and `CompatHTTPClient` attaches the relayed headers instead.
+
+Consequences:
+
+- **Basic auth now works**, closing an original out-of-scope item. Superposition
+  declares `@httpBasicAuth` alongside bearer and selects the grant via
+  `X-Grant-Type`, so that header is relayed alongside `Authorization`.
+- **Malformed headers are relayed, not repaired.** A doubled scheme is passed
+  through and rejected upstream. Paired with the HTML-login-page repair, the
+  caller now gets a message naming the cause instead of a parser trace. This is
+  deliberate: a relay that rewrites credentials can corrupt them, and it hides
+  client misconfiguration instead of surfacing it.
+- The **only** header this server builds is the one from `SUPERPOSITION_TOKEN`,
+  and that is the only place a `Bearer ` prefix is normalized - because there we
+  add the scheme ourselves, so a prefix already present would be doubled.
+
+`resolve_auth_headers(ctx)` replaces `_resolve_token(ctx)`, returning the header
+map to send rather than a bare token.

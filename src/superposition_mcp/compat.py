@@ -297,12 +297,40 @@ class CompatHTTPClient:
     Wraps any object satisfying smithy's ``HTTPClient`` protocol (a single
     ``send`` coroutine), so it composes with whatever transport the SDK config
     would otherwise build.
+
+    Also the place the upstream credential is attached: ``auth_headers`` are set
+    verbatim on every outgoing request (see ``auth.resolve_auth_headers``). Pass
+    ``repair=False`` to relay credentials but skip every compatibility repair.
     """
 
-    def __init__(self, inner: Any) -> None:
+    def __init__(
+        self,
+        inner: Any,
+        *,
+        auth_headers: dict[str, str] | None = None,
+        repair: bool = True,
+    ) -> None:
         self._inner = inner
+        self._auth_headers = auth_headers or {}
+        self._repair = repair
+
+    def _attach_auth(self, request: Any) -> Any:
+        """Set the relayed credential headers on the outgoing request.
+
+        The SDK is configured with no auth scheme, so it contributes no
+        ``Authorization`` of its own and there is nothing to collide with.
+        """
+        if not self._auth_headers:
+            return request
+        fields = request.fields
+        for name, value in self._auth_headers.items():
+            fields.set_field(Field(name=name, values=[value]))
+        return request
 
     async def send(self, request: Any, *, request_config: Any = None) -> Any:
+        request = self._attach_auth(request)
+        if not self._repair:
+            return await self._inner.send(request, request_config=request_config)
         request = _repair_request(request)
         request = await _repair_request_body(request)
         response = await self._inner.send(request, request_config=request_config)
