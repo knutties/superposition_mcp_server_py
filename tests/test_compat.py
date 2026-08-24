@@ -321,7 +321,10 @@ async def test_html_login_page_becomes_an_auth_error() -> None:
     assert resp.status == 401
     msg = json.loads(resp.body)["message"]
     assert "expired" in msg
-    assert "Authorization" in msg
+    # The upstream host must be named: a token valid against one deployment is
+    # not valid against another, and that is invisible without it.
+    assert "https://sp.example.com/config" in msg
+    assert "SUPERPOSITION_ENDPOINT" in msg
 
 
 async def test_html_detection_is_case_insensitive() -> None:
@@ -361,3 +364,43 @@ async def test_json_responses_are_unaffected_by_html_check() -> None:
     resp = await CompatHTTPClient(inner).send(_req("POST", "/config"))
     assert resp.status == 200
     assert json.loads(resp.body) == {"ok": True}
+
+
+async def test_auth_error_names_the_upstream_including_port() -> None:
+    """Same token, works locally, fails in prod: usually a different upstream."""
+    inner = _Inner(
+        _resp(
+            status=200,
+            body=b"<!DOCTYPE html><html>login</html>",
+            headers=[Field(name="content-type", values=["text/html"])],
+        )
+    )
+    req = HTTPRequest(
+        destination=URI(scheme="http", host="superposition-svc", port=8080, path="/audit"),
+        method="GET",
+        fields=Fields([]),
+        body=b"",
+    )
+    resp = await CompatHTTPClient(inner).send(req)
+    assert "http://superposition-svc:8080/audit" in json.loads(resp.body)["message"]
+
+
+async def test_auth_error_omits_the_query_string() -> None:
+    """Query strings carry filter values; the host and path are enough."""
+    inner = _Inner(
+        _resp(
+            status=200,
+            body=b"<html>login</html>",
+            headers=[Field(name="content-type", values=["text/html"])],
+        )
+    )
+    req = HTTPRequest(
+        destination=URI(host="sp.example.com", path="/audit", query="username=alice"),
+        method="GET",
+        fields=Fields([]),
+        body=b"",
+    )
+    resp = await CompatHTTPClient(inner).send(req)
+    msg = json.loads(resp.body)["message"]
+    assert "sp.example.com/audit" in msg
+    assert "alice" not in msg

@@ -250,6 +250,19 @@ def _path_of(request: Any) -> str:
         return ""
 
 
+def _target_of(request: Any) -> str:
+    """scheme://host[:port]/path for a request, for diagnostics.
+
+    Deliberately excludes the query string, which can carry filter values.
+    """
+    try:
+        d = request.destination
+        port = f":{d.port}" if getattr(d, "port", None) else ""
+        return f"{d.scheme}://{d.host}{port}{d.path or ''}"
+    except AttributeError:  # pragma: no cover - defensive
+        return "<unknown>"
+
+
 def _repair_headers(path: str, response: HTTPResponse) -> None:
     """Backfill a missing ``last-modified`` header, in place."""
     if not any(path.endswith(p) for p in _NEEDS_LAST_MODIFIED):
@@ -337,7 +350,7 @@ class CompatHTTPClient:
         path = _path_of(request)
 
         if _is_html(response):
-            return await _surface_html_login_page(path, response)
+            return await _surface_html_login_page(path, response, _target_of(request))
 
         if response.status >= 400:
             return await _surface_plaintext_error(path, response)
@@ -362,7 +375,9 @@ def _is_html(response: HTTPResponse) -> bool:
     return any("html" in v.lower() for v in values)
 
 
-async def _surface_html_login_page(path: str, response: HTTPResponse) -> HTTPResponse:
+async def _surface_html_login_page(
+    path: str, response: HTTPResponse, target: str = "<unknown>"
+) -> HTTPResponse:
     """Turn an HTML login page into a legible auth error.
 
     When the bearer token is missing, invalid or expired, Superposition answers
@@ -385,16 +400,21 @@ async def _surface_html_login_page(path: str, response: HTTPResponse) -> HTTPRes
         return _with_body(response, raw)
 
     _log.warning(
-        "%s returned an HTML page instead of JSON - treating as an auth failure", path
+        "%s returned an HTML page instead of JSON - treating as an auth failure "
+        "(upstream target: %s)",
+        path,
+        target,
     )
     fields = response.fields
     fields.set_field(Field(name="content-type", values=["application/json"]))
     message = (
-        "Superposition returned its HTML login page instead of an API response. "
-        "The bearer token is missing, invalid, or expired - check the "
-        "Authorization header on the MCP request. Tokens copied from a browser "
-        "session cookie expire after 24 hours; use an API token for anything "
-        "long-lived."
+        "Superposition returned its HTML login page instead of an API response, "
+        f"so the credential was rejected by {target}. The token is missing, "
+        "invalid, expired, or not valid for THAT upstream — note the host above "
+        "and check it is the Superposition you meant (SUPERPOSITION_ENDPOINT). A "
+        "token that works against one deployment is not valid against another. "
+        "Tokens copied from a browser session cookie also expire after 24 hours; "
+        "use an API token for anything long-lived."
     )
     return HTTPResponse(
         body=json.dumps({"message": message}).encode(),

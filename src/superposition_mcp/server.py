@@ -7,6 +7,7 @@ Importing this module registers all tool decorators as a side effect (via the
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import Callable
 from typing import Any, TypeVar
 
@@ -59,6 +60,16 @@ def configure_logging() -> str:
     # startup, which can clobber root-logger level inheritance. Setting the level on
     # the package logger directly survives that reconfiguration.
     logging.getLogger("superposition_mcp").setLevel(cfg_level)
+
+    # Log the upstream at startup. "works locally, fails in prod" is almost
+    # always a different SUPERPOSITION_ENDPOINT, and that is otherwise invisible
+    # until a call fails.
+    endpoint = os.environ.get("SUPERPOSITION_ENDPOINT")
+    _log.info(
+        "upstream SUPERPOSITION_ENDPOINT=%s | writes=%s",
+        endpoint or "<UNSET>",
+        "enabled" if writes_enabled() else "disabled (SUPERPOSITION_READONLY)",
+    )
     return cfg_level
 
 
