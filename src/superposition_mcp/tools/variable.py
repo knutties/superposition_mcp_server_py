@@ -13,16 +13,16 @@ from superposition_sdk.models import (
 
 from superposition_mcp.auth import get_client
 from superposition_mcp.errors import run_write, wrap_sdk_errors
-from superposition_mcp.helpers import filter_none, resolve_org, resolve_workspace, to_dict
+from superposition_mcp.helpers import filter_none, to_dict
 from superposition_mcp.server import mcp, write_tool
 
 
 @mcp.tool()
 async def get_variable(
     name: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
 ) -> dict[str, Any]:
     """Get a variable by name."""
     async with wrap_sdk_errors("GetVariable"):
@@ -31,8 +31,8 @@ async def get_variable(
             await client.get_variable(
                 GetVariableInput(
                     name=name,
-                    org_id=resolve_org(org_id),
-                    workspace_id=resolve_workspace(workspace_id),
+                    org_id=org_id,
+                    workspace_id=workspace_id,
                 )
             )
         )
@@ -40,9 +40,9 @@ async def get_variable(
 
 @mcp.tool()
 async def list_variables(
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     count: int | None = None,
     page: int | None = None,
     all: bool | None = None,
@@ -61,8 +61,8 @@ async def list_variables(
     async with wrap_sdk_errors("ListVariables"):
         client = await get_client(ctx)
         kwargs: dict[str, Any] = dict(
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             count=count,
             page=page,
             all=all,
@@ -81,9 +81,9 @@ async def create_variable(
     value: str,
     change_reason: str,
     description: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
 ) -> dict[str, Any]:
     """Create a workspace variable. MUTATES CONFIG.
 
@@ -97,8 +97,8 @@ async def create_variable(
             name=name,
             value=value,
             change_reason=change_reason,
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             description=description,
         )
         return to_dict(
@@ -113,9 +113,9 @@ async def create_variable(
 async def update_variable(
     name: str,
     change_reason: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     value: str | None = None,
     description: str | None = None,
 ) -> dict[str, Any]:
@@ -128,8 +128,8 @@ async def update_variable(
         kwargs: dict[str, Any] = dict(
             name=name,
             change_reason=change_reason,
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             value=value,
             description=description,
         )

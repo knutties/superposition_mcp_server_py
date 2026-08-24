@@ -25,8 +25,6 @@ from superposition_mcp.auth import get_client
 from superposition_mcp.errors import run_write, wrap_sdk_errors
 from superposition_mcp.helpers import (
     filter_none,
-    resolve_org,
-    resolve_workspace,
     to_dict,
     to_document,
     to_document_map,
@@ -68,9 +66,9 @@ def _build_variants(variants: list[dict[str, Any]]) -> list[Variant]:
 @mcp.tool()
 async def get_experiment(
     id: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
 ) -> dict[str, Any]:
     """Get an experiment by id."""
     async with wrap_sdk_errors("GetExperiment"):
@@ -79,8 +77,8 @@ async def get_experiment(
             await client.get_experiment(
                 GetExperimentInput(
                     id=id,
-                    org_id=resolve_org(org_id),
-                    workspace_id=resolve_workspace(workspace_id),
+                    org_id=org_id,
+                    workspace_id=workspace_id,
                 )
             )
         )
@@ -88,9 +86,9 @@ async def get_experiment(
 
 @mcp.tool()
 async def list_experiment(
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     count: int | None = None,
     page: int | None = None,
     all: bool | None = None,
@@ -128,8 +126,8 @@ async def list_experiment(
     async with wrap_sdk_errors("ListExperiment"):
         client = await get_client(ctx)
         kwargs: dict[str, Any] = dict(
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             count=count,
             page=page,
             all=all,
@@ -157,9 +155,9 @@ async def list_experiment(
 async def applicable_variants(
     context: dict[str, Any],
     identifier: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     prefix: list[str] | None = None,
     exclude_prefix: list[str] | None = None,
 ) -> dict[str, Any]:
@@ -174,8 +172,8 @@ async def applicable_variants(
         kwargs: dict[str, Any] = dict(
             context=to_document_map(context),
             identifier=identifier,
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             prefix=prefix,
             exclude_prefix=exclude_prefix,
         )
@@ -186,9 +184,9 @@ async def applicable_variants(
 
 @mcp.tool()
 async def get_experiment_config(
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     context: dict[str, Any] | None = None,
     prefix: list[str] | None = None,
     exclude_prefix: list[str] | None = None,
@@ -208,8 +206,8 @@ async def get_experiment_config(
     async with wrap_sdk_errors("GetExperimentConfig"):
         client = await get_client(ctx)
         kwargs: dict[str, Any] = dict(
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             context=to_document_map(context),
             prefix=prefix,
             exclude_prefix=exclude_prefix,
@@ -227,9 +225,9 @@ async def create_experiment(
     variants: list[dict[str, Any]],
     change_reason: str,
     description: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     context: dict[str, Any] | None = None,
     experiment_type: str | None = None,
     metrics: dict[str, Any] | None = None,
@@ -255,8 +253,8 @@ async def create_experiment(
         client = await get_client(ctx)
         kwargs: dict[str, Any] = dict(
             name=name,
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             variants=built_variants,
             change_reason=change_reason,
             context=to_document_map(context),
@@ -280,9 +278,9 @@ async def update_overrides_experiment(
     id: str,
     variant_list: list[dict[str, Any]],
     change_reason: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     description: str | None = None,
     metrics: dict[str, Any] | None = None,
     experiment_group_id: str | None = None,
@@ -313,8 +311,8 @@ async def update_overrides_experiment(
         client = await get_client(ctx)
         kwargs: dict[str, Any] = dict(
             id=id,
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             variant_list=updates,
             change_reason=change_reason,
             description=description,
@@ -337,9 +335,9 @@ async def ramp_experiment(
     id: str,
     traffic_percentage: int,
     change_reason: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
 ) -> dict[str, Any]:
     """Set an experiment's traffic percentage. MUTATES LIVE TRAFFIC.
 
@@ -357,8 +355,8 @@ async def ramp_experiment(
                         id=id,
                         traffic_percentage=traffic_percentage,
                         change_reason=change_reason,
-                        org_id=resolve_org(org_id),
-                        workspace_id=resolve_workspace(workspace_id),
+                        org_id=org_id,
+                        workspace_id=workspace_id,
                     )
                 ),
             )
@@ -369,9 +367,9 @@ async def ramp_experiment(
 async def pause_experiment(
     id: str,
     change_reason: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
 ) -> dict[str, Any]:
     """Pause a running experiment, stopping variant traffic. MUTATES LIVE TRAFFIC.
 
@@ -386,8 +384,8 @@ async def pause_experiment(
                     PauseExperimentInput(
                         id=id,
                         change_reason=change_reason,
-                        org_id=resolve_org(org_id),
-                        workspace_id=resolve_workspace(workspace_id),
+                        org_id=org_id,
+                        workspace_id=workspace_id,
                     )
                 ),
             )
@@ -398,9 +396,9 @@ async def pause_experiment(
 async def resume_experiment(
     id: str,
     change_reason: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
 ) -> dict[str, Any]:
     """Resume a paused experiment at its previous traffic split. MUTATES LIVE TRAFFIC."""
     async with wrap_sdk_errors("ResumeExperiment"):
@@ -412,8 +410,8 @@ async def resume_experiment(
                     ResumeExperimentInput(
                         id=id,
                         change_reason=change_reason,
-                        org_id=resolve_org(org_id),
-                        workspace_id=resolve_workspace(workspace_id),
+                        org_id=org_id,
+                        workspace_id=workspace_id,
                     )
                 ),
             )
@@ -425,9 +423,9 @@ async def conclude_experiment(
     id: str,
     chosen_variant: str,
     change_reason: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     description: str | None = None,
     config_tags: str | None = None,
 ) -> dict[str, Any]:
@@ -443,8 +441,8 @@ async def conclude_experiment(
             id=id,
             chosen_variant=chosen_variant,
             change_reason=change_reason,
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             description=description,
             config_tags=config_tags,
         )
@@ -460,9 +458,9 @@ async def conclude_experiment(
 async def discard_experiment(
     id: str,
     change_reason: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     config_tags: str | None = None,
 ) -> dict[str, Any]:
     """Discard an experiment without promoting any variant. IRREVERSIBLE.
@@ -475,8 +473,8 @@ async def discard_experiment(
         kwargs: dict[str, Any] = dict(
             id=id,
             change_reason=change_reason,
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             config_tags=config_tags,
         )
         return to_dict(

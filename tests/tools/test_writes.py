@@ -52,7 +52,7 @@ def _client(method: str) -> MagicMock:
 async def test_create_context_wraps_context_and_override(env: None) -> None:
     client = _client("create_context")
     with patch("superposition_mcp.tools.context.get_client", AsyncMock(return_value=client)):
-        await create_context(
+        await create_context(org_id="o1", workspace_id="prod",
             context={"country": "IN"},
             override={"timeout_ms": 500},
             change_reason="raise IN timeout",
@@ -70,7 +70,7 @@ async def test_create_context_wraps_context_and_override(env: None) -> None:
 async def test_move_context_wraps_new_condition(env: None) -> None:
     client = _client("move_context")
     with patch("superposition_mcp.tools.context.get_client", AsyncMock(return_value=client)):
-        await move_context(
+        await move_context(org_id="o1", workspace_id="prod",
             id="ctx-1",
             context={"country": "US"},
             change_reason="retarget",
@@ -85,7 +85,9 @@ async def test_move_context_wraps_new_condition(env: None) -> None:
 async def test_validate_context_wraps_as_map(env: None) -> None:
     client = _client("validate_context")
     with patch("superposition_mcp.tools.context.get_client", AsyncMock(return_value=client)):
-        await validate_context(context={"country": "IN"}, ctx=make_stdio_ctx())
+        await validate_context(
+            org_id="o1", workspace_id="prod", context={"country": "IN"}, ctx=make_stdio_ctx()
+        )
     sent = client.validate_context.await_args.args[0]
     assert sent.context == {"country": Document("IN")}
 
@@ -93,7 +95,7 @@ async def test_validate_context_wraps_as_map(env: None) -> None:
 async def test_update_override_by_id_builds_id_identifier(env: None) -> None:
     client = _client("update_override")
     with patch("superposition_mcp.tools.context.get_client", AsyncMock(return_value=client)):
-        await update_context_override(
+        await update_context_override(org_id="o1", workspace_id="prod",
             override={"a": 1},
             change_reason="tweak",
             context_id="ctx-9",
@@ -107,7 +109,7 @@ async def test_update_override_by_id_builds_id_identifier(env: None) -> None:
 async def test_update_override_by_condition_builds_context_identifier(env: None) -> None:
     client = _client("update_override")
     with patch("superposition_mcp.tools.context.get_client", AsyncMock(return_value=client)):
-        await update_context_override(
+        await update_context_override(org_id="o1", workspace_id="prod",
             override={"a": 1},
             change_reason="tweak",
             context={"country": "IN"},
@@ -129,7 +131,7 @@ async def test_update_override_requires_exactly_one_identifier(
     env: None, kwargs: dict
 ) -> None:
     with pytest.raises(McpError) as excinfo:
-        await update_context_override(
+        await update_context_override(org_id="o1", workspace_id="prod",
             override={"a": 1}, change_reason="x", ctx=make_stdio_ctx(), **kwargs
         )
     assert "exactly one" in str(excinfo.value)
@@ -140,7 +142,7 @@ async def test_create_default_config_wraps_value_and_schema(env: None) -> None:
     with patch(
         "superposition_mcp.tools.default_config.get_client", AsyncMock(return_value=client)
     ):
-        await create_default_config(
+        await create_default_config(org_id="o1", workspace_id="prod",
             key="timeout_ms",
             value=300,
             schema={"type": "number"},
@@ -157,7 +159,7 @@ async def test_create_default_config_wraps_value_and_schema(env: None) -> None:
 async def test_create_dimension_builds_regular_type(env: None) -> None:
     client = _client("create_dimension")
     with patch("superposition_mcp.tools.dimension.get_client", AsyncMock(return_value=client)):
-        await create_dimension(
+        await create_dimension(org_id="o1", workspace_id="prod",
             dimension="country",
             schema={"type": "string"},
             position=1,
@@ -191,7 +193,7 @@ def test_build_dimension_type_none_stays_none() -> None:
 async def test_create_experiment_builds_variants(env: None) -> None:
     client = _client("create_experiment")
     with patch("superposition_mcp.tools.experiment.get_client", AsyncMock(return_value=client)):
-        await create_experiment(
+        await create_experiment(org_id="o1", workspace_id="prod",
             name="checkout-test",
             variants=[
                 {"id": "control", "variant_type": "CONTROL", "overrides": {"btn": "blue"}},
@@ -210,7 +212,7 @@ async def test_create_experiment_builds_variants(env: None) -> None:
 
 async def test_create_experiment_rejects_malformed_variant(env: None) -> None:
     with pytest.raises(McpError) as excinfo:
-        await create_experiment(
+        await create_experiment(org_id="o1", workspace_id="prod",
             name="x",
             variants=[{"id": "control"}],  # missing variant_type and overrides
             change_reason="r",
@@ -224,7 +226,7 @@ async def test_create_experiment_rejects_malformed_variant(env: None) -> None:
 async def test_ramp_experiment_passes_percentage(env: None) -> None:
     client = _client("ramp_experiment")
     with patch("superposition_mcp.tools.experiment.get_client", AsyncMock(return_value=client)):
-        await ramp_experiment(
+        await ramp_experiment(org_id="o1", workspace_id="prod",
             id="e1", traffic_percentage=25, change_reason="ramp", ctx=make_stdio_ctx()
         )
     sent = client.ramp_experiment.await_args.args[0]
@@ -235,7 +237,7 @@ async def test_ramp_experiment_passes_percentage(env: None) -> None:
 async def test_conclude_experiment_passes_chosen_variant(env: None) -> None:
     client = _client("conclude_experiment")
     with patch("superposition_mcp.tools.experiment.get_client", AsyncMock(return_value=client)):
-        await conclude_experiment(
+        await conclude_experiment(org_id="o1", workspace_id="prod",
             id="e1", chosen_variant="treat", change_reason="won", ctx=make_stdio_ctx()
         )
     sent = client.conclude_experiment.await_args.args[0]

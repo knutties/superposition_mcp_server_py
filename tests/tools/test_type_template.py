@@ -36,7 +36,9 @@ async def test_get_type_template(env: None) -> None:
     with patch(
         "superposition_mcp.tools.type_template.get_client", AsyncMock(return_value=client)
     ):
-        result = await get_type_template(type_name="Currency", ctx=make_stdio_ctx())
+        result = await get_type_template(
+            org_id="o1", workspace_id="prod", type_name="Currency", ctx=make_stdio_ctx()
+        )
     assert result == {"type_name": "Currency"}
 
 
@@ -46,6 +48,8 @@ async def test_get_type_templates_list(env: None) -> None:
     with patch(
         "superposition_mcp.tools.type_template.get_client", AsyncMock(return_value=client)
     ):
-        await get_type_templates_list(ctx=make_stdio_ctx(), count=5)
+        await get_type_templates_list(
+            org_id="o1", workspace_id="prod", ctx=make_stdio_ctx(), count=5
+        )
     sent = client.get_type_templates_list.await_args.args[0]
     assert sent.count == 5

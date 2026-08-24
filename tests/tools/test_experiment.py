@@ -37,7 +37,9 @@ async def test_get_experiment(env: None) -> None:
     client = MagicMock()
     client.get_experiment = AsyncMock(return_value=_Exp(id="e1"))
     with patch("superposition_mcp.tools.experiment.get_client", AsyncMock(return_value=client)):
-        result = await get_experiment(id="e1", ctx=make_stdio_ctx())
+        result = await get_experiment(
+            org_id="o1", workspace_id="prod", id="e1", ctx=make_stdio_ctx()
+        )
     assert result["id"] == "e1"
 
 
@@ -45,7 +47,9 @@ async def test_list_experiment(env: None) -> None:
     client = MagicMock()
     client.list_experiment = AsyncMock(return_value=_List(data=[_Exp()], total_items=1))
     with patch("superposition_mcp.tools.experiment.get_client", AsyncMock(return_value=client)):
-        result = await list_experiment(ctx=make_stdio_ctx(), count=5)
+        result = await list_experiment(
+            org_id="o1", workspace_id="prod", ctx=make_stdio_ctx(), count=5
+        )
     assert result["total_items"] == 1
     sent = client.list_experiment.await_args.args[0]
     assert sent.count == 5
@@ -55,7 +59,7 @@ async def test_applicable_variants(env: None) -> None:
     client = MagicMock()
     client.applicable_variants = AsyncMock(return_value=_List(data=[], total_items=0))
     with patch("superposition_mcp.tools.experiment.get_client", AsyncMock(return_value=client)):
-        await applicable_variants(
+        await applicable_variants(org_id="o1", workspace_id="prod",
             context={"country": "IN"},
             identifier="user-42",
             ctx=make_stdio_ctx(),

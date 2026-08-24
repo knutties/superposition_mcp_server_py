@@ -31,7 +31,9 @@ async def test_get_variable(env: None) -> None:
     client = MagicMock()
     client.get_variable = AsyncMock(return_value=_Var())
     with patch("superposition_mcp.tools.variable.get_client", AsyncMock(return_value=client)):
-        result = await get_variable(name="v1", ctx=make_stdio_ctx())
+        result = await get_variable(
+            org_id="o1", workspace_id="prod", name="v1", ctx=make_stdio_ctx()
+        )
     assert result == {"name": "v1"}
 
 
@@ -39,6 +41,6 @@ async def test_list_variables(env: None) -> None:
     client = MagicMock()
     client.list_variables = AsyncMock(return_value=_List())
     with patch("superposition_mcp.tools.variable.get_client", AsyncMock(return_value=client)):
-        await list_variables(ctx=make_stdio_ctx())
+        await list_variables(org_id="o1", workspace_id="prod", ctx=make_stdio_ctx())
     sent = client.list_variables.await_args.args[0]
     assert sent.workspace_id == "prod"

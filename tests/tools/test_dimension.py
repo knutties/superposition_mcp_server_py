@@ -31,7 +31,9 @@ async def test_get_dimension(env: None) -> None:
     client = MagicMock()
     client.get_dimension = AsyncMock(return_value=_Dim(dimension="country"))
     with patch("superposition_mcp.tools.dimension.get_client", AsyncMock(return_value=client)):
-        result = await get_dimension(dimension="country", ctx=make_stdio_ctx())
+        result = await get_dimension(
+            org_id="o1", workspace_id="prod", dimension="country", ctx=make_stdio_ctx()
+        )
     assert result == {"dimension": "country"}
     sent = client.get_dimension.await_args.args[0]
     assert sent.dimension == "country"
@@ -41,6 +43,6 @@ async def test_list_dimensions(env: None) -> None:
     client = MagicMock()
     client.list_dimensions = AsyncMock(return_value=_List())
     with patch("superposition_mcp.tools.dimension.get_client", AsyncMock(return_value=client)):
-        await list_dimensions(ctx=make_stdio_ctx(), count=10)
+        await list_dimensions(org_id="o1", workspace_id="prod", ctx=make_stdio_ctx(), count=10)
     sent = client.list_dimensions.await_args.args[0]
     assert sent.count == 10

@@ -29,20 +29,26 @@ async def test_get_workspace_uses_explicit_org(clean_env: None) -> None:
     assert sent.org_id == "o1"
 
 
-async def test_get_workspace_falls_back_to_env_org(
+async def test_get_workspace_ignores_env_org(
     clean_env: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """org_id is a required tool argument; a stale env var must not shadow it."""
     monkeypatch.setenv("SUPERPOSITION_ORG_ID", "env_org")
     client = MagicMock()
-    client.get_workspace = AsyncMock(return_value=_Ws(workspace_name="prod", org_id="env_org"))
+    client.get_workspace = AsyncMock(return_value=_Ws(workspace_name="prod", org_id="o1"))
     with patch("superposition_mcp.tools.workspace.get_client", AsyncMock(return_value=client)):
-        await get_workspace(workspace_name="prod", ctx=make_stdio_ctx())
+        await get_workspace(org_id="o1", workspace_name="prod", ctx=make_stdio_ctx())
     sent = client.get_workspace.await_args.args[0]
-    assert sent.org_id == "env_org"
+    assert sent.org_id == "o1"
 
 
-async def test_list_workspace_happy_path(clean_env: None, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("SUPERPOSITION_ORG_ID", "env_org")
+async def test_get_workspace_requires_org_id(clean_env: None) -> None:
+    """Missing org_id is a schema-level error now, not a runtime lookup failure."""
+    with pytest.raises(TypeError):
+        await get_workspace(workspace_name="prod", ctx=make_stdio_ctx())  # type: ignore[call-arg]
+
+
+async def test_list_workspace_happy_path(clean_env: None) -> None:
     client = MagicMock()
 
     @dataclass
@@ -53,8 +59,8 @@ async def test_list_workspace_happy_path(clean_env: None, monkeypatch: pytest.Mo
     client.list_workspace = AsyncMock(return_value=_ListOut(data=[], total_items=0))
 
     with patch("superposition_mcp.tools.workspace.get_client", AsyncMock(return_value=client)):
-        result = await list_workspace(ctx=make_stdio_ctx(), count=5)
+        result = await list_workspace(org_id="o1", ctx=make_stdio_ctx(), count=5)
     assert result == {"data": [], "total_items": 0}
     sent = client.list_workspace.await_args.args[0]
-    assert sent.org_id == "env_org"
+    assert sent.org_id == "o1"
     assert sent.count == 5

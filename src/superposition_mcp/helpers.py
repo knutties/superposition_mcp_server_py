@@ -1,41 +1,18 @@
-"""Argument resolution and response serialization helpers used by every tool."""
+"""Argument shaping and response serialization helpers used by every tool.
+
+``org_id`` and ``workspace_id`` are required parameters on every tool that
+needs them, so there is nothing to resolve: an agent is told up front what
+it must supply rather than discovering it from a runtime error.
+"""
 from __future__ import annotations
 
 import dataclasses
-import os
 from datetime import date, datetime
 from enum import Enum
 from typing import Any
 
 from mcp.shared.exceptions import McpError
 from mcp.types import INVALID_REQUEST, ErrorData
-
-
-def _missing(arg: str, env_var: str) -> McpError:
-    return McpError(
-        ErrorData(
-            code=INVALID_REQUEST,
-            message=f"{arg} is required (pass as a tool argument or set {env_var} env var)",
-        )
-    )
-
-
-def resolve_org(explicit: str | None) -> str:
-    if explicit:
-        return explicit
-    env = os.environ.get("SUPERPOSITION_ORG_ID")
-    if env:
-        return env
-    raise _missing("org_id", "SUPERPOSITION_ORG_ID")
-
-
-def resolve_workspace(explicit: str | None) -> str:
-    if explicit:
-        return explicit
-    env = os.environ.get("SUPERPOSITION_WORKSPACE")
-    if env:
-        return env
-    raise _missing("workspace_id", "SUPERPOSITION_WORKSPACE")
 
 
 def filter_none(d: dict[str, Any]) -> dict[str, Any]:

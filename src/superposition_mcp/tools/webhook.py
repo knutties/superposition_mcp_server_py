@@ -16,8 +16,6 @@ from superposition_mcp.auth import get_client
 from superposition_mcp.errors import run_write, wrap_sdk_errors
 from superposition_mcp.helpers import (
     filter_none,
-    resolve_org,
-    resolve_workspace,
     to_dict,
     to_document_map,
 )
@@ -27,9 +25,9 @@ from superposition_mcp.server import mcp, write_tool
 @mcp.tool()
 async def get_webhook(
     name: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
 ) -> dict[str, Any]:
     """Get a webhook by name."""
     async with wrap_sdk_errors("GetWebhook"):
@@ -38,8 +36,8 @@ async def get_webhook(
             await client.get_webhook(
                 GetWebhookInput(
                     name=name,
-                    org_id=resolve_org(org_id),
-                    workspace_id=resolve_workspace(workspace_id),
+                    org_id=org_id,
+                    workspace_id=workspace_id,
                 )
             )
         )
@@ -48,9 +46,9 @@ async def get_webhook(
 @mcp.tool()
 async def get_webhook_by_event(
     event: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
 ) -> dict[str, Any]:
     """Get the webhooks subscribed to a given event name.
 
@@ -63,8 +61,8 @@ async def get_webhook_by_event(
             await client.get_webhook_by_event(
                 GetWebhookByEventInput(
                     event=event,
-                    org_id=resolve_org(org_id),
-                    workspace_id=resolve_workspace(workspace_id),
+                    org_id=org_id,
+                    workspace_id=workspace_id,
                 )
             )
         )
@@ -72,9 +70,9 @@ async def get_webhook_by_event(
 
 @mcp.tool()
 async def list_webhook(
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     count: int | None = None,
     page: int | None = None,
     all: bool | None = None,
@@ -86,8 +84,8 @@ async def list_webhook(
     async with wrap_sdk_errors("ListWebhook"):
         client = await get_client(ctx)
         kwargs = dict(
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             count=count,
             page=page,
             all=all,
@@ -104,9 +102,9 @@ async def create_webhook(
     description: str,
     enabled: bool,
     method: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     version: str | None = None,
     custom_headers: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -127,8 +125,8 @@ async def create_webhook(
             url=url,
             events=events,
             change_reason=change_reason,
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             description=description,
             enabled=enabled,
             method=method,
@@ -146,9 +144,9 @@ async def create_webhook(
 async def update_webhook(
     name: str,
     change_reason: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     url: str | None = None,
     events: list[str] | None = None,
     description: str | None = None,
@@ -167,8 +165,8 @@ async def update_webhook(
         kwargs: dict[str, Any] = dict(
             name=name,
             change_reason=change_reason,
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             url=url,
             events=events,
             description=description,

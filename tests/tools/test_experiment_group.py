@@ -37,7 +37,9 @@ async def test_get_experiment_group(env: None) -> None:
         "superposition_mcp.tools.experiment_group.get_client",
         AsyncMock(return_value=client),
     ):
-        result = await get_experiment_group(id="g1", ctx=make_stdio_ctx())
+        result = await get_experiment_group(
+            org_id="o1", workspace_id="prod", id="g1", ctx=make_stdio_ctx()
+        )
     assert result == {"id": "g1"}
 
 
@@ -48,6 +50,8 @@ async def test_list_experiment_groups(env: None) -> None:
         "superposition_mcp.tools.experiment_group.get_client",
         AsyncMock(return_value=client),
     ):
-        await list_experiment_groups(ctx=make_stdio_ctx(), count=10)
+        await list_experiment_groups(
+            org_id="o1", workspace_id="prod", ctx=make_stdio_ctx(), count=10
+        )
     sent = client.list_experiment_groups.await_args.args[0]
     assert sent.count == 10

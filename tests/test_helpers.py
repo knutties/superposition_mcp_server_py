@@ -5,43 +5,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
 
-import pytest
-from mcp.shared.exceptions import McpError
-
-from superposition_mcp.helpers import resolve_org, resolve_workspace, to_dict
-
-
-def test_resolve_org_explicit_wins(clean_env: None, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("SUPERPOSITION_ORG_ID", "env_org")
-    assert resolve_org("explicit") == "explicit"
-
-
-def test_resolve_org_falls_back_to_env(clean_env: None, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("SUPERPOSITION_ORG_ID", "env_org")
-    assert resolve_org(None) == "env_org"
-
-
-def test_resolve_org_raises_when_missing(clean_env: None) -> None:
-    with pytest.raises(McpError) as excinfo:
-        resolve_org(None)
-    assert "org_id" in str(excinfo.value).lower()
-
-
-def test_resolve_workspace_explicit_wins(clean_env: None, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("SUPERPOSITION_WORKSPACE", "env_ws")
-    assert resolve_workspace("explicit") == "explicit"
-
-
-def test_resolve_workspace_falls_back_to_env(
-    clean_env: None, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setenv("SUPERPOSITION_WORKSPACE", "env_ws")
-    assert resolve_workspace(None) == "env_ws"
-
-
-def test_resolve_workspace_raises_when_missing(clean_env: None) -> None:
-    with pytest.raises(McpError):
-        resolve_workspace(None)
+from superposition_mcp.helpers import to_dict
 
 
 class _Status(Enum):

@@ -15,8 +15,6 @@ from superposition_mcp.auth import get_client
 from superposition_mcp.errors import run_write, wrap_sdk_errors
 from superposition_mcp.helpers import (
     filter_none,
-    resolve_org,
-    resolve_workspace,
     to_dict,
     to_document,
     to_document_map,
@@ -27,9 +25,9 @@ from superposition_mcp.server import mcp, write_tool
 @mcp.tool()
 async def get_default_config(
     key: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
 ) -> dict[str, Any]:
     """Get the default config value for a key in a workspace."""
     async with wrap_sdk_errors("GetDefaultConfig"):
@@ -38,8 +36,8 @@ async def get_default_config(
             await client.get_default_config(
                 GetDefaultConfigInput(
                     key=key,
-                    org_id=resolve_org(org_id),
-                    workspace_id=resolve_workspace(workspace_id),
+                    org_id=org_id,
+                    workspace_id=workspace_id,
                 )
             )
         )
@@ -47,9 +45,9 @@ async def get_default_config(
 
 @mcp.tool()
 async def list_default_configs(
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     count: int | None = None,
     page: int | None = None,
     all: bool | None = None,
@@ -62,8 +60,8 @@ async def list_default_configs(
     async with wrap_sdk_errors("ListDefaultConfigs"):
         client = await get_client(ctx)
         kwargs: dict[str, Any] = dict(
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             count=count,
             page=page,
             all=all,
@@ -81,9 +79,9 @@ async def create_default_config(
     schema: dict[str, Any],
     change_reason: str,
     description: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     value_validation_function_name: str | None = None,
     value_compute_function_name: str | None = None,
 ) -> dict[str, Any]:
@@ -103,8 +101,8 @@ async def create_default_config(
             value=to_document(value),
             schema=to_document_map(schema),
             change_reason=change_reason,
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             description=description,
             value_validation_function_name=value_validation_function_name,
             value_compute_function_name=value_compute_function_name,
@@ -121,9 +119,9 @@ async def create_default_config(
 async def update_default_config(
     key: str,
     change_reason: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     value: Any = None,
     schema: dict[str, Any] | None = None,
     description: str | None = None,
@@ -144,8 +142,8 @@ async def update_default_config(
         kwargs: dict[str, Any] = dict(
             key=key,
             change_reason=change_reason,
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             value=to_document(value),
             schema=to_document_map(schema),
             description=description,

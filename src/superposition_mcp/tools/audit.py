@@ -9,15 +9,15 @@ from superposition_sdk.models import ListAuditLogsInput
 
 from superposition_mcp.auth import get_client
 from superposition_mcp.errors import wrap_sdk_errors
-from superposition_mcp.helpers import filter_none, resolve_org, resolve_workspace, to_dict
+from superposition_mcp.helpers import filter_none, to_dict
 from superposition_mcp.server import mcp
 
 
 @mcp.tool()
 async def list_audit_logs(
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     count: int | None = None,
     page: int | None = None,
     all: bool | None = None,
@@ -57,8 +57,8 @@ async def list_audit_logs(
     async with wrap_sdk_errors("ListAuditLogs"):
         client = await get_client(ctx)
         kwargs = dict(
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             count=count,
             page=page,
             all=all,

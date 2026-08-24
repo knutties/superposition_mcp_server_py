@@ -25,8 +25,6 @@ from superposition_mcp.auth import get_client
 from superposition_mcp.errors import wrap_sdk_errors
 from superposition_mcp.helpers import (
     filter_none,
-    resolve_org,
-    resolve_workspace,
     to_dict,
     to_document_map,
 )
@@ -35,9 +33,9 @@ from superposition_mcp.server import mcp
 
 @mcp.tool()
 async def get_config_json(
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     if_modified_since: datetime.datetime | None = None,
 ) -> dict[str, Any]:
     """Get the full raw config (defaults + all contexts + overrides) in JSON form.
@@ -51,8 +49,8 @@ async def get_config_json(
         client = await get_client(ctx)
         kwargs = filter_none(
             dict(
-                org_id=resolve_org(org_id),
-                workspace_id=resolve_workspace(workspace_id),
+                org_id=org_id,
+                workspace_id=workspace_id,
                 if_modified_since=if_modified_since,
             )
         )
@@ -61,9 +59,9 @@ async def get_config_json(
 
 @mcp.tool()
 async def get_config_toml(
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     if_modified_since: datetime.datetime | None = None,
 ) -> dict[str, Any]:
     """Get the full raw config in TOML form (returned as a string within a dict).
@@ -74,8 +72,8 @@ async def get_config_toml(
         client = await get_client(ctx)
         kwargs = filter_none(
             dict(
-                org_id=resolve_org(org_id),
-                workspace_id=resolve_workspace(workspace_id),
+                org_id=org_id,
+                workspace_id=workspace_id,
                 if_modified_since=if_modified_since,
             )
         )
@@ -84,9 +82,9 @@ async def get_config_toml(
 
 @mcp.tool()
 async def get_config(
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     context: dict[str, Any] | None = None,
     prefix: list[str] | None = None,
     exclude_prefix: list[str] | None = None,
@@ -107,8 +105,8 @@ async def get_config(
     async with wrap_sdk_errors("GetConfig"):
         client = await get_client(ctx)
         kwargs: dict[str, Any] = dict(
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             context=to_document_map(context),
             prefix=prefix,
             exclude_prefix=exclude_prefix,
@@ -120,9 +118,9 @@ async def get_config(
 
 @mcp.tool()
 async def get_resolved_config(
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     context: dict[str, Any] | None = None,
     prefix: list[str] | None = None,
     exclude_prefix: list[str] | None = None,
@@ -149,8 +147,8 @@ async def get_resolved_config(
     async with wrap_sdk_errors("GetResolvedConfig"):
         client = await get_client(ctx)
         kwargs: dict[str, Any] = dict(
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             context=to_document_map(context),
             prefix=prefix,
             exclude_prefix=exclude_prefix,
@@ -167,9 +165,9 @@ async def get_resolved_config(
 
 @mcp.tool()
 async def get_detailed_resolved_config(
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     context: dict[str, Any] | None = None,
     prefix: list[str] | None = None,
     exclude_prefix: list[str] | None = None,
@@ -188,8 +186,8 @@ async def get_detailed_resolved_config(
     async with wrap_sdk_errors("GetDetailedResolvedConfig"):
         client = await get_client(ctx)
         kwargs: dict[str, Any] = dict(
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             context=to_document_map(context),
             prefix=prefix,
             exclude_prefix=exclude_prefix,
@@ -209,9 +207,9 @@ async def get_detailed_resolved_config(
 @mcp.tool()
 async def get_resolved_config_explanation(
     key: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     context: dict[str, Any] | None = None,
     version: str | None = None,
     merge_strategy: str | None = None,
@@ -233,8 +231,8 @@ async def get_resolved_config_explanation(
         client = await get_client(ctx)
         kwargs: dict[str, Any] = dict(
             key=key,
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             context=to_document_map(context),
             version=version,
             merge_strategy=merge_strategy,
@@ -251,9 +249,9 @@ async def get_resolved_config_explanation(
 @mcp.tool()
 async def get_resolved_config_with_identifier(
     identifier: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     context: dict[str, Any] | None = None,
     prefix: list[str] | None = None,
     exclude_prefix: list[str] | None = None,
@@ -274,8 +272,8 @@ async def get_resolved_config_with_identifier(
         client = await get_client(ctx)
         kwargs: dict[str, Any] = dict(
             identifier=identifier,
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             context=to_document_map(context),
             prefix=prefix,
             exclude_prefix=exclude_prefix,
@@ -295,9 +293,9 @@ async def get_resolved_config_with_identifier(
 @mcp.tool()
 async def get_version(
     id: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
 ) -> dict[str, Any]:
     """Get a specific config version by id."""
     async with wrap_sdk_errors("GetVersion"):
@@ -306,8 +304,8 @@ async def get_version(
             await client.get_version(
                 GetVersionInput(
                     id=id,
-                    org_id=resolve_org(org_id),
-                    workspace_id=resolve_workspace(workspace_id),
+                    org_id=org_id,
+                    workspace_id=workspace_id,
                 )
             )
         )
@@ -315,9 +313,9 @@ async def get_version(
 
 @mcp.tool()
 async def list_versions(
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     count: int | None = None,
     page: int | None = None,
 ) -> dict[str, Any]:
@@ -325,8 +323,8 @@ async def list_versions(
     async with wrap_sdk_errors("ListVersions"):
         client = await get_client(ctx)
         kwargs: dict[str, Any] = dict(
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             count=count,
             page=page,
         )

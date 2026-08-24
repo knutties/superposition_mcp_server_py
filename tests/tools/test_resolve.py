@@ -40,7 +40,7 @@ def _client(method: str) -> MagicMock:
 async def test_get_resolved_config_wraps_context_map(env: None) -> None:
     client = _client("get_resolved_config")
     with patch("superposition_mcp.tools.config.get_client", AsyncMock(return_value=client)):
-        await get_resolved_config(
+        await get_resolved_config(org_id="o1", workspace_id="prod",
             context={"country": "IN", "tier": "gold"},
             prefix=["checkout"],
             exclude_prefix=["internal"],
@@ -60,7 +60,7 @@ async def test_get_resolved_config_without_context(env: None) -> None:
     """Omitting context must not send an empty map — filter_none drops it."""
     client = _client("get_resolved_config")
     with patch("superposition_mcp.tools.config.get_client", AsyncMock(return_value=client)):
-        await get_resolved_config(ctx=make_stdio_ctx())
+        await get_resolved_config(org_id="o1", workspace_id="prod", ctx=make_stdio_ctx())
     sent = client.get_resolved_config.await_args.args[0]
     assert sent.context is None
 
@@ -68,7 +68,7 @@ async def test_get_resolved_config_without_context(env: None) -> None:
 async def test_get_resolved_config_explanation_passes_key(env: None) -> None:
     client = _client("get_resolved_config_explanation")
     with patch("superposition_mcp.tools.config.get_client", AsyncMock(return_value=client)):
-        await get_resolved_config_explanation(
+        await get_resolved_config_explanation(org_id="o1", workspace_id="prod",
             key="checkout.timeout_ms",
             context={"country": "IN"},
             ctx=make_stdio_ctx(),
@@ -81,7 +81,9 @@ async def test_get_resolved_config_explanation_passes_key(env: None) -> None:
 async def test_get_detailed_resolved_config(env: None) -> None:
     client = _client("get_detailed_resolved_config")
     with patch("superposition_mcp.tools.config.get_client", AsyncMock(return_value=client)):
-        await get_detailed_resolved_config(context={"country": "IN"}, ctx=make_stdio_ctx())
+        await get_detailed_resolved_config(
+            org_id="o1", workspace_id="prod", context={"country": "IN"}, ctx=make_stdio_ctx()
+        )
     sent = client.get_detailed_resolved_config.await_args.args[0]
     assert sent.context == {"country": Document("IN")}
 
@@ -89,7 +91,7 @@ async def test_get_detailed_resolved_config(env: None) -> None:
 async def test_get_resolved_config_with_identifier(env: None) -> None:
     client = _client("get_resolved_config_with_identifier")
     with patch("superposition_mcp.tools.config.get_client", AsyncMock(return_value=client)):
-        await get_resolved_config_with_identifier(
+        await get_resolved_config_with_identifier(org_id="o1", workspace_id="prod",
             identifier="user-42", context={"country": "IN"}, ctx=make_stdio_ctx()
         )
     sent = client.get_resolved_config_with_identifier.await_args.args[0]
@@ -100,7 +102,7 @@ async def test_get_resolved_config_with_identifier(env: None) -> None:
 async def test_get_config_passes_prefix_filters(env: None) -> None:
     client = _client("get_config")
     with patch("superposition_mcp.tools.config.get_client", AsyncMock(return_value=client)):
-        await get_config(
+        await get_config(org_id="o1", workspace_id="prod",
             context={"country": "IN"},
             prefix=["a", "b"],
             exclude_prefix=["a.secret"],
@@ -114,7 +116,7 @@ async def test_get_config_passes_prefix_filters(env: None) -> None:
 async def test_get_experiment_config(env: None) -> None:
     client = _client("get_experiment_config")
     with patch("superposition_mcp.tools.experiment.get_client", AsyncMock(return_value=client)):
-        await get_experiment_config(
+        await get_experiment_config(org_id="o1", workspace_id="prod",
             context={"country": "IN"},
             dimension_match_strategy="non_conflicting",
             ctx=make_stdio_ctx(),
@@ -127,7 +129,9 @@ async def test_get_experiment_config(env: None) -> None:
 async def test_get_webhook_by_event(env: None) -> None:
     client = _client("get_webhook_by_event")
     with patch("superposition_mcp.tools.webhook.get_client", AsyncMock(return_value=client)):
-        await get_webhook_by_event(event="config.updated", ctx=make_stdio_ctx())
+        await get_webhook_by_event(
+            org_id="o1", workspace_id="prod", event="config.updated", ctx=make_stdio_ctx()
+        )
     sent = client.get_webhook_by_event.await_args.args[0]
     assert sent.event == "config.updated"
     assert sent.org_id == "o1"

@@ -13,15 +13,15 @@ from superposition_sdk.models import (
 
 from superposition_mcp.auth import get_client
 from superposition_mcp.errors import run_write, wrap_sdk_errors
-from superposition_mcp.helpers import filter_none, resolve_org, to_dict, to_document
+from superposition_mcp.helpers import filter_none, to_dict, to_document
 from superposition_mcp.server import mcp, write_tool
 
 
 @mcp.tool()
 async def get_workspace(
     workspace_name: str,
+    org_id: str,
     ctx: Context,
-    org_id: str | None = None,
 ) -> dict[str, Any]:
     """Get a Superposition workspace by name within an organisation.
 
@@ -32,15 +32,15 @@ async def get_workspace(
         client = await get_client(ctx)
         return to_dict(
             await client.get_workspace(
-                GetWorkspaceInput(workspace_name=workspace_name, org_id=resolve_org(org_id))
+                GetWorkspaceInput(workspace_name=workspace_name, org_id=org_id)
             )
         )
 
 
 @mcp.tool()
 async def list_workspace(
+    org_id: str,
     ctx: Context,
-    org_id: str | None = None,
     count: int | None = None,
     page: int | None = None,
     all: bool | None = None,
@@ -52,7 +52,7 @@ async def list_workspace(
     async with wrap_sdk_errors("ListWorkspace"):
         client = await get_client(ctx)
         kwargs: dict[str, Any] = dict(
-            org_id=resolve_org(org_id), count=count, page=page, all=all
+            org_id=org_id, count=count, page=page, all=all
         )
         return to_dict(await client.list_workspace(ListWorkspaceInput(**filter_none(kwargs))))
 
@@ -61,8 +61,8 @@ async def list_workspace(
 async def create_workspace(
     workspace_name: str,
     workspace_admin_email: str,
+    org_id: str,
     ctx: Context,
-    org_id: str | None = None,
     workspace_status: str | None = None,
     metrics: dict[str, Any] | None = None,
     allow_experiment_self_approval: bool | None = None,
@@ -81,7 +81,7 @@ async def create_workspace(
         kwargs: dict[str, Any] = dict(
             workspace_name=workspace_name,
             workspace_admin_email=workspace_admin_email,
-            org_id=resolve_org(org_id),
+            org_id=org_id,
             workspace_status=workspace_status,
             metrics=to_document(metrics),
             allow_experiment_self_approval=allow_experiment_self_approval,
@@ -100,8 +100,8 @@ async def create_workspace(
 @write_tool()
 async def update_workspace(
     workspace_name: str,
+    org_id: str,
     ctx: Context,
-    org_id: str | None = None,
     workspace_admin_email: str | None = None,
     config_version: str | None = None,
     mandatory_dimensions: list[str] | None = None,
@@ -130,7 +130,7 @@ async def update_workspace(
         client = await get_client(ctx)
         kwargs: dict[str, Any] = dict(
             workspace_name=workspace_name,
-            org_id=resolve_org(org_id),
+            org_id=org_id,
             workspace_admin_email=workspace_admin_email,
             config_version=config_version,
             mandatory_dimensions=mandatory_dimensions,

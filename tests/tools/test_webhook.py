@@ -31,7 +31,9 @@ async def test_get_webhook(env: None) -> None:
     client = MagicMock()
     client.get_webhook = AsyncMock(return_value=_Wh())
     with patch("superposition_mcp.tools.webhook.get_client", AsyncMock(return_value=client)):
-        result = await get_webhook(name="deploy-hook", ctx=make_stdio_ctx())
+        result = await get_webhook(
+            org_id="o1", workspace_id="prod", name="deploy-hook", ctx=make_stdio_ctx()
+        )
     assert result == {"name": "deploy-hook"}
 
 
@@ -39,6 +41,6 @@ async def test_list_webhook(env: None) -> None:
     client = MagicMock()
     client.list_webhook = AsyncMock(return_value=_List())
     with patch("superposition_mcp.tools.webhook.get_client", AsyncMock(return_value=client)):
-        await list_webhook(ctx=make_stdio_ctx(), count=10)
+        await list_webhook(org_id="o1", workspace_id="prod", ctx=make_stdio_ctx(), count=10)
     sent = client.list_webhook.await_args.args[0]
     assert sent.count == 10

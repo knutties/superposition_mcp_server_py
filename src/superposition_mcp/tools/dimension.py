@@ -21,8 +21,6 @@ from superposition_mcp.auth import get_client
 from superposition_mcp.errors import run_write, wrap_sdk_errors
 from superposition_mcp.helpers import (
     filter_none,
-    resolve_org,
-    resolve_workspace,
     to_dict,
     to_document_map,
 )
@@ -63,9 +61,9 @@ def _build_dimension_type(kind: str | None, value: str | None) -> Any:
 @mcp.tool()
 async def get_dimension(
     dimension: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
 ) -> dict[str, Any]:
     """Get a dimension definition by name."""
     async with wrap_sdk_errors("GetDimension"):
@@ -74,8 +72,8 @@ async def get_dimension(
             await client.get_dimension(
                 GetDimensionInput(
                     dimension=dimension,
-                    org_id=resolve_org(org_id),
-                    workspace_id=resolve_workspace(workspace_id),
+                    org_id=org_id,
+                    workspace_id=workspace_id,
                 )
             )
         )
@@ -83,9 +81,9 @@ async def get_dimension(
 
 @mcp.tool()
 async def list_dimensions(
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     count: int | None = None,
     page: int | None = None,
     all: bool | None = None,
@@ -97,8 +95,8 @@ async def list_dimensions(
     async with wrap_sdk_errors("ListDimensions"):
         client = await get_client(ctx)
         kwargs = dict(
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             count=count,
             page=page,
             all=all,
@@ -113,9 +111,9 @@ async def create_dimension(
     position: int,
     change_reason: str,
     description: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     dimension_type: str | None = None,
     dimension_type_value: str | None = None,
     value_validation_function_name: str | None = None,
@@ -139,8 +137,8 @@ async def create_dimension(
             schema=to_document_map(schema),
             position=position,
             change_reason=change_reason,
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             description=description,
             dimension_type=_build_dimension_type(dimension_type, dimension_type_value),
             value_validation_function_name=value_validation_function_name,
@@ -158,9 +156,9 @@ async def create_dimension(
 async def update_dimension(
     dimension: str,
     change_reason: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     schema: dict[str, Any] | None = None,
     position: int | None = None,
     description: str | None = None,
@@ -178,8 +176,8 @@ async def update_dimension(
         kwargs: dict[str, Any] = dict(
             dimension=dimension,
             change_reason=change_reason,
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             schema=to_document_map(schema),
             position=position,
             description=description,

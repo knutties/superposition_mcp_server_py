@@ -23,8 +23,6 @@ def _env_flag(name: str, *, default: bool = False) -> bool:
 class Config:
     endpoint: str
     token: str | None
-    default_org_id: str | None
-    default_workspace: str | None
     log_level: str
     readonly: bool
 
@@ -38,8 +36,6 @@ def load_config() -> Config:
     return Config(
         endpoint=endpoint,
         token=os.environ.get("SUPERPOSITION_TOKEN"),
-        default_org_id=os.environ.get("SUPERPOSITION_ORG_ID"),
-        default_workspace=os.environ.get("SUPERPOSITION_WORKSPACE"),
         log_level=os.environ.get("LOG_LEVEL", "INFO"),
         readonly=_env_flag("SUPERPOSITION_READONLY"),
     )

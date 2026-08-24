@@ -410,3 +410,27 @@ Consequences:
 
 `resolve_auth_headers(ctx)` replaces `_resolve_token(ctx)`, returning the header
 map to send rather than a bare token.
+
+---
+
+## Amendment - 2026-08-24b: org_id and workspace_id are required arguments
+
+Previously both were optional tool parameters resolved arg -> env -> error. An
+agent therefore learned they were needed only by calling a tool and getting
+`org_id is required` back, having already had to guess. On a deployment with no
+env defaults - which is the normal multi-tenant case - that happened on every
+first call.
+
+They are now **required** parameters on all 66 workspace- and org-scoped tools,
+so they appear in `required` on each tool's input schema and the model is told
+up front. `get_workspace` / `list_workspace` take `org_id` only; the organisation
+tools take neither.
+
+Consequently `SUPERPOSITION_ORG_ID` and `SUPERPOSITION_WORKSPACE` are gone,
+along with `helpers.resolve_org` / `resolve_workspace` and the
+`Config.default_org_id` / `default_workspace` fields - a required parameter can
+never fall through to a default, so keeping them would have been dead
+configuration that still appeared to work.
+
+This is a breaking change for any caller that relied on the env defaults: those
+tool calls must now pass both values explicitly.

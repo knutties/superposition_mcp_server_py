@@ -27,8 +27,6 @@ from superposition_mcp.auth import get_client
 from superposition_mcp.errors import run_write, wrap_sdk_errors
 from superposition_mcp.helpers import (
     filter_none,
-    resolve_org,
-    resolve_workspace,
     to_dict,
     to_document,
 )
@@ -84,9 +82,9 @@ def _build_test_request(function_type: str, request: dict[str, Any]) -> Any:
 @mcp.tool()
 async def get_function(
     function_name: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
 ) -> dict[str, Any]:
     """Get a function definition by name."""
     async with wrap_sdk_errors("GetFunction"):
@@ -95,8 +93,8 @@ async def get_function(
             await client.get_function(
                 GetFunctionInput(
                     function_name=function_name,
-                    org_id=resolve_org(org_id),
-                    workspace_id=resolve_workspace(workspace_id),
+                    org_id=org_id,
+                    workspace_id=workspace_id,
                 )
             )
         )
@@ -104,9 +102,9 @@ async def get_function(
 
 @mcp.tool()
 async def list_function(
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     count: int | None = None,
     page: int | None = None,
     all: bool | None = None,
@@ -120,8 +118,8 @@ async def list_function(
     async with wrap_sdk_errors("ListFunction"):
         client = await get_client(ctx)
         kwargs: dict[str, Any] = dict(
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             count=count,
             page=page,
             all=all,
@@ -136,9 +134,9 @@ async def test_function(
     stage: str,
     function_type: str,
     request: dict[str, Any],
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
 ) -> dict[str, Any]:
     """Execute a function against sample input and return its result.
 
@@ -167,8 +165,8 @@ async def test_function(
                     function_name=function_name,
                     stage=stage,
                     request=payload,
-                    org_id=resolve_org(org_id),
-                    workspace_id=resolve_workspace(workspace_id),
+                    org_id=org_id,
+                    workspace_id=workspace_id,
                 )
             )
         )
@@ -182,9 +180,9 @@ async def create_function(
     runtime_version: str,
     change_reason: str,
     description: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
 ) -> dict[str, Any]:
     """Create a validation or compute function. MUTATES SCHEMA — STORES CODE.
 
@@ -203,8 +201,8 @@ async def create_function(
             function_type=function_type,
             runtime_version=runtime_version,
             change_reason=change_reason,
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             description=description,
         )
         return to_dict(
@@ -218,9 +216,9 @@ async def create_function(
 async def update_function(
     function_name: str,
     change_reason: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     function: str | None = None,
     runtime_version: str | None = None,
     description: str | None = None,
@@ -235,8 +233,8 @@ async def update_function(
         kwargs: dict[str, Any] = dict(
             function_name=function_name,
             change_reason=change_reason,
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             function=function,
             runtime_version=runtime_version,
             description=description,
@@ -252,9 +250,9 @@ async def update_function(
 async def publish_function(
     function_name: str,
     change_reason: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
 ) -> dict[str, Any]:
     """Publish a function's draft, making it live. MUTATES VALIDATION BEHAVIOUR.
 
@@ -271,8 +269,8 @@ async def publish_function(
                     PublishInput(
                         function_name=function_name,
                         change_reason=change_reason,
-                        org_id=resolve_org(org_id),
-                        workspace_id=resolve_workspace(workspace_id),
+                        org_id=org_id,
+                        workspace_id=workspace_id,
                     )
                 ),
             )

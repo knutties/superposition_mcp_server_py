@@ -18,8 +18,6 @@ from superposition_mcp.auth import get_client
 from superposition_mcp.errors import run_write, wrap_sdk_errors
 from superposition_mcp.helpers import (
     filter_none,
-    resolve_org,
-    resolve_workspace,
     to_dict,
     to_document_map,
 )
@@ -29,9 +27,9 @@ from superposition_mcp.server import mcp, write_tool
 @mcp.tool()
 async def get_experiment_group(
     id: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
 ) -> dict[str, Any]:
     """Get an experiment group by id."""
     async with wrap_sdk_errors("GetExperimentGroup"):
@@ -40,8 +38,8 @@ async def get_experiment_group(
             await client.get_experiment_group(
                 GetExperimentGroupInput(
                     id=id,
-                    org_id=resolve_org(org_id),
-                    workspace_id=resolve_workspace(workspace_id),
+                    org_id=org_id,
+                    workspace_id=workspace_id,
                 )
             )
         )
@@ -49,9 +47,9 @@ async def get_experiment_group(
 
 @mcp.tool()
 async def list_experiment_groups(
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     count: int | None = None,
     page: int | None = None,
     all: bool | None = None,
@@ -80,8 +78,8 @@ async def list_experiment_groups(
     async with wrap_sdk_errors("ListExperimentGroups"):
         client = await get_client(ctx)
         kwargs: dict[str, Any] = dict(
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             count=count,
             page=page,
             all=all,
@@ -106,9 +104,9 @@ async def create_experiment_group(
     name: str,
     change_reason: str,
     description: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     context: dict[str, Any] | None = None,
     traffic_percentage: int | None = None,
     member_experiment_ids: list[str] | None = None,
@@ -126,8 +124,8 @@ async def create_experiment_group(
         kwargs: dict[str, Any] = dict(
             name=name,
             change_reason=change_reason,
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             description=description,
             context=to_document_map(context),
             traffic_percentage=traffic_percentage,
@@ -145,9 +143,9 @@ async def create_experiment_group(
 async def update_experiment_group(
     id: str,
     change_reason: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
     description: str | None = None,
     traffic_percentage: int | None = None,
 ) -> dict[str, Any]:
@@ -161,8 +159,8 @@ async def update_experiment_group(
         kwargs: dict[str, Any] = dict(
             id=id,
             change_reason=change_reason,
-            org_id=resolve_org(org_id),
-            workspace_id=resolve_workspace(workspace_id),
+            org_id=org_id,
+            workspace_id=workspace_id,
             description=description,
             traffic_percentage=traffic_percentage,
         )
@@ -179,9 +177,9 @@ async def add_members_to_group(
     id: str,
     member_experiment_ids: list[str],
     change_reason: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
 ) -> dict[str, Any]:
     """Add experiments to an experiment group. MUTATES LIVE TRAFFIC.
 
@@ -198,8 +196,8 @@ async def add_members_to_group(
                         id=id,
                         member_experiment_ids=member_experiment_ids,
                         change_reason=change_reason,
-                        org_id=resolve_org(org_id),
-                        workspace_id=resolve_workspace(workspace_id),
+                        org_id=org_id,
+                        workspace_id=workspace_id,
                     )
                 ),
             )
@@ -211,9 +209,9 @@ async def remove_members_from_group(
     id: str,
     member_experiment_ids: list[str],
     change_reason: str,
+    org_id: str,
+    workspace_id: str,
     ctx: Context,
-    org_id: str | None = None,
-    workspace_id: str | None = None,
 ) -> dict[str, Any]:
     """Remove experiments from an experiment group. MUTATES LIVE TRAFFIC.
 
@@ -230,8 +228,8 @@ async def remove_members_from_group(
                         id=id,
                         member_experiment_ids=member_experiment_ids,
                         change_reason=change_reason,
-                        org_id=resolve_org(org_id),
-                        workspace_id=resolve_workspace(workspace_id),
+                        org_id=org_id,
+                        workspace_id=workspace_id,
                     )
                 ),
             )

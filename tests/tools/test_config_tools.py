@@ -41,7 +41,7 @@ async def test_get_config_json(env: None) -> None:
     client = MagicMock()
     client.get_config_json = AsyncMock(return_value=_Cfg(config={"feature.x": True}))
     with patch("superposition_mcp.tools.config.get_client", AsyncMock(return_value=client)):
-        result = await get_config_json(
+        result = await get_config_json(org_id="o1", workspace_id="prod",
             ctx=make_stdio_ctx(), if_modified_since="Mon, 01 Jan 2024 00:00:00 GMT"
         )
     assert result == {"config": {"feature.x": True}}
@@ -53,7 +53,7 @@ async def test_get_config_json_no_optional(env: None) -> None:
     client = MagicMock()
     client.get_config_json = AsyncMock(return_value=_Cfg())
     with patch("superposition_mcp.tools.config.get_client", AsyncMock(return_value=client)):
-        result = await get_config_json(ctx=make_stdio_ctx())
+        result = await get_config_json(org_id="o1", workspace_id="prod", ctx=make_stdio_ctx())
     assert result == {"config": {}}
 
 
@@ -61,14 +61,14 @@ async def test_get_config_toml(env: None) -> None:
     client = MagicMock()
     client.get_config_toml = AsyncMock(return_value=_Cfg())
     with patch("superposition_mcp.tools.config.get_client", AsyncMock(return_value=client)):
-        await get_config_toml(ctx=make_stdio_ctx())
+        await get_config_toml(org_id="o1", workspace_id="prod", ctx=make_stdio_ctx())
 
 
 async def test_get_version(env: None) -> None:
     client = MagicMock()
     client.get_version = AsyncMock(return_value=_Ver(id="v1"))
     with patch("superposition_mcp.tools.config.get_client", AsyncMock(return_value=client)):
-        result = await get_version(id="v1", ctx=make_stdio_ctx())
+        result = await get_version(org_id="o1", workspace_id="prod", id="v1", ctx=make_stdio_ctx())
     assert result == {"id": "v1"}
 
 
@@ -76,6 +76,6 @@ async def test_list_versions(env: None) -> None:
     client = MagicMock()
     client.list_versions = AsyncMock(return_value=_ListV())
     with patch("superposition_mcp.tools.config.get_client", AsyncMock(return_value=client)):
-        await list_versions(ctx=make_stdio_ctx(), count=5)
+        await list_versions(org_id="o1", workspace_id="prod", ctx=make_stdio_ctx(), count=5)
     sent = client.list_versions.await_args.args[0]
     assert sent.count == 5

@@ -18,8 +18,6 @@ uv sync
 |---|---|---|
 | `SUPERPOSITION_ENDPOINT` | yes | upstream Superposition API URL (e.g., `https://sp.example.com`) |
 | `SUPERPOSITION_TOKEN` | stdio only | bearer token; for `http` transport the token is read from the inbound `Authorization` header per request |
-| `SUPERPOSITION_ORG_ID` | no | default org id used when a tool call omits `org_id` |
-| `SUPERPOSITION_WORKSPACE` | no | default workspace used when a tool call omits `workspace_id` |
 | `SUPERPOSITION_READONLY` | no | `1`/`true`/`yes`/`on` hides every mutating tool. Unset (default) exposes them. |
 | `SUPERPOSITION_STRICT_RESPONSES` | no | `1` disables the deployment-compatibility shim (see below) and lets SDK decode errors surface. |
 | `LOG_LEVEL` | no | `DEBUG` / `INFO` (default) / `WARNING` / `ERROR` |
@@ -30,8 +28,6 @@ uv sync
 # stdio (local, single-tenant; launched as a subprocess by an MCP client)
 SUPERPOSITION_ENDPOINT=https://sp.example.com \
 SUPERPOSITION_TOKEN=sp_xxx \
-SUPERPOSITION_ORG_ID=org_abc \
-SUPERPOSITION_WORKSPACE=prod \
   uv run superposition-mcp
 
 # streamable-http (remote, multi-tenant)
@@ -78,8 +74,6 @@ The token never reaches the LLM. The MCP **client** holds the credential and att
 claude mcp add superposition-local \
   -e SUPERPOSITION_ENDPOINT=https://sp.example.com \
   -e SUPERPOSITION_TOKEN=sp_xxx \
-  -e SUPERPOSITION_ORG_ID=org_abc \
-  -e SUPERPOSITION_WORKSPACE=prod \
   -- uv run --directory /abs/path/to/this/repo superposition-mcp
 
 # streamable-http: client talks to a deployed instance; bearer is sent per request.
@@ -194,8 +188,6 @@ Pull and run:
 docker run --rm -i \
   -e SUPERPOSITION_ENDPOINT=https://sp.example.com \
   -e SUPERPOSITION_TOKEN=sp_xxx \
-  -e SUPERPOSITION_ORG_ID=org_abc \
-  -e SUPERPOSITION_WORKSPACE=prod \
   ghcr.io/knutties/superposition_mcp_server_py:latest
 
 # streamable-http (remote, multi-tenant)
@@ -217,6 +209,19 @@ docker run --rm superposition-mcp:dev --help
 `.github/workflows/ci.yml` runs `ruff` and `pytest` on every push and PR, plus a no-push Docker build to validate the `Dockerfile` and run `--help` inside the image.
 
 `.github/workflows/docker-publish.yml` builds multi-arch (`linux/amd64`, `linux/arm64`) images and pushes them to GHCR, tagged by branch, commit SHA, semver tag, and `latest` (on `main`).
+
+## Org and workspace are required arguments
+
+Every tool that operates inside a workspace takes `org_id` and `workspace_id` as
+**required** parameters, so they appear in `required` on the tool's input schema.
+An agent is told what it must supply up front rather than discovering it from a
+runtime `org_id is required` error after the model has already guessed.
+
+There are no server-side defaults for them. A deployment therefore serves any
+org and workspace the caller's token can reach, and switching between them needs
+no reconfiguration. Tools that are not workspace-scoped are unaffected:
+`get_workspace` / `list_workspace` take `org_id` only, and the organisation tools
+take neither.
 
 ## Tools exposed
 
@@ -274,8 +279,6 @@ uv run superposition-mcp --help
 # stdio: full MCP handshake + tool calls against a live backend
 SUPERPOSITION_ENDPOINT=http://localhost:8080 \
 SUPERPOSITION_TOKEN=dev \
-SUPERPOSITION_ORG_ID=localorg \
-SUPERPOSITION_WORKSPACE=dev \
   uv run python scripts/smoke_local.py
 
 # streamable-http: spawns the server on an auto-picked port, exercises the
@@ -283,8 +286,6 @@ SUPERPOSITION_WORKSPACE=dev \
 # rejected before any upstream traffic.
 SUPERPOSITION_ENDPOINT=http://localhost:8080 \
 UPSTREAM_TOKEN=dev \
-SUPERPOSITION_ORG_ID=localorg \
-SUPERPOSITION_WORKSPACE=dev \
   uv run python scripts/smoke_http.py
 ```
 
